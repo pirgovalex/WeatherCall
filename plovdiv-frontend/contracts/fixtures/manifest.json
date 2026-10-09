@@ -1,0 +1,88 @@
+{
+  "schema_version": "1",
+  "run_id": "2026-10-07T14-00-00Z-abc123",
+  "generated_at_utc": "2026-10-07T14:05:12Z",
+  "attribution": [
+    "Copernicus Atmosphere Monitoring Service (CAMS)",
+    "Open-Meteo"
+  ],
+  "variables": {
+    "pm2_5": {
+      "unit": "ug/m3",
+      "label": "PM2.5"
+    },
+    "pm10": {
+      "unit": "ug/m3",
+      "label": "PM10"
+    },
+    "no2": {
+      "unit": "ug/m3",
+      "label": "NO2"
+    },
+    "temperature_2m": {
+      "unit": "degC",
+      "label": "Temperature"
+    },
+    "wind_gusts_10m": {
+      "unit": "m/s",
+      "label": "Wind gusts"
+    },
+    "precipitation": {
+      "unit": "mm",
+      "label": "Precipitation"
+    }
+  },
+  "marts": {
+    "mart_weather_aq_hourly": {
+      "glob": "mart_weather_aq_hourly/latest/*.parquet",
+      "rows": 336,
+      "min_valid_at_utc": "2026-10-14T00:00:00Z",
+      "max_valid_at_utc": "2026-10-27T23:00:00Z",
+      "max_analysis_valid_at_utc": "2026-10-27T23:00:00Z"
+    },
+    "mart_aq_daily": {
+      "glob": "mart_aq_daily/latest/*.parquet",
+      "rows": 42,
+      "min_day": "2026-10-14",
+      "max_day": "2026-10-27"
+    },
+    "mart_aq_trend_monthly": {
+      "glob": "mart_aq_trend_monthly/latest/*.parquet",
+      "rows": 50,
+      "min_month": "2025-05-01",
+      "max_month": "2026-10-01"
+    },
+    "mart_aq_risk_daily": {
+      "glob": "mart_aq_risk_daily/latest/*.parquet",
+      "rows": 78,
+      "min_target_date": "2025-06-24",
+      "max_target_date": "2026-10-28"
+    },
+    "mart_aq_risk_drivers": {
+      "glob": "mart_aq_risk_drivers/latest/*.parquet",
+      "rows": 320
+    },
+    "mart_model_card": {
+      "glob": "mart_model_card/latest/*.parquet",
+      "rows": 2
+    },
+    "mart_model_calibration": {
+      "glob": "mart_model_calibration/latest/*.parquet",
+      "rows": 20
+    }
+  },
+  "stations": {
+    "BG0051A": {
+      "label": "Kamenitsa",
+      "station_type": "background",
+      "area_type": "urban",
+      "location_id": "plovdiv"
+    },
+    "BG0078A": {
+      "label": "Trakia",
+      "station_type": "traffic",
+      "area_type": "urban",
+      "location_id": "plovdiv"
+    }
+  }
+}

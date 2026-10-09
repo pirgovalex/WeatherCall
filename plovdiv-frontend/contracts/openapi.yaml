@@ -1,0 +1,1288 @@
+openapi: 3.0.3
+info:
+  title: Plovdiv Weather and Air Quality Analytics API
+  description: Read-only analytics API for the Plovdiv weather and air quality warehouse against data contracts.
+  version: "1"
+
+paths:
+  /healthz:
+    get:
+      summary: Liveness health check
+      description: Returns service operational status.
+      operationId: getHealthz
+      responses:
+        "200":
+          description: Service is healthy and responsive
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+
+  /api/v1/meta:
+    get:
+      summary: Warehouse execution metadata
+      description: Returns schema_version, run_id, generated_at_utc, attribution, the variable catalogue, and data ranges per mart.
+      operationId: getMeta
+      responses:
+        "200":
+          description: Warehouse metadata matching manifest.json
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /api/v1/series:
+    get:
+      summary: Columnar time series data
+      description: Returns columnar time series for a single variable and location. Timestamps are epoch seconds UTC and values preserve null for gaps.
+      operationId: getSeries
+      parameters:
+        - name: variable
+          in: query
+          required: true
+          description: Variable identifier defined in manifest catalogue (e.g. pm2_5, temperature_2m).
+          schema:
+            type: string
+            example: "pm2_5"
+        - name: location
+          in: query
+          required: true
+          description: Location identifier (e.g. plovdiv).
+          schema:
+            type: string
+            example: "plovdiv"
+        - name: from
+          in: query
+          required: true
+          description: Query range start timestamp in ISO-8601 UTC.
+          schema:
+            type: string
+            format: date-time
+            example: "2026-10-14T00:00:00Z"
+        - name: to
+          in: query
+          required: true
+          description: Query range end timestamp in ISO-8601 UTC, inclusive. Maximum span is 366 days.
+          schema:
+            type: string
+            format: date-time
+            example: "2026-10-27T23:00:00Z"
+        - name: resolution
+          in: query
+          required: true
+          description: Series temporal resolution.
+          schema:
+            type: string
+            enum:
+              - hourly
+              - daily
+            example: "hourly"
+        - name: source_type
+          in: query
+          required: false
+          description: Provenance classification of data.
+          schema:
+            type: string
+            enum:
+              - station
+              - analysis
+              - reanalysis_provisional
+              - reanalysis_final
+              - forecast
+            example: "analysis"
+      responses:
+        "200":
+          description: Columnar time series response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeriesResponse"
+        "404":
+          description: Unknown location or variable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "422":
+          description: Validation error (bad parameter or range > 366 days)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /api/v1/aq/daily:
+    get:
+      summary: Daily air quality aggregated series
+      description: Returns daily air quality summary metrics (mean, valid_hours, is_valid_day) on EEA day convention (UTC+1).
+      operationId: getAqDaily
+      parameters:
+        - name: pollutant
+          in: query
+          required: true
+          description: Air quality pollutant identifier.
+          schema:
+            type: string
+            enum:
+              - pm2_5
+              - pm10
+              - no2
+            example: "pm10"
+        - name: location
+          in: query
+          required: true
+          description: Location identifier (e.g. plovdiv).
+          schema:
+            type: string
+            example: "plovdiv"
+        - name: from
+          in: query
+          required: true
+          description: Start date or timestamp in ISO-8601 UTC.
+          schema:
+            type: string
+            example: "2026-10-14"
+        - name: to
+          in: query
+          required: true
+          description: End date or timestamp in ISO-8601 UTC, inclusive. Maximum span is 366 days.
+          schema:
+            type: string
+            example: "2026-10-27"
+      responses:
+        "200":
+          description: Parallel arrays of daily air quality metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyAqResponse"
+        "404":
+          description: Unknown location or pollutant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "422":
+          description: Validation error (bad parameter or range > 366 days)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /api/v1/aq/trend:
+    get:
+      summary: Monthly air quality trend per station
+      description: >-
+        Returns monthly mean concentrations for one station and pollutant, both as observed and adjusted
+        for weather, with a lower and upper bound for the adjusted mean. A month is returned when any part
+        of it falls inside the range from..to (both inclusive, calendar dates in UTC). Months are keyed by
+        their first day. A month with no valid days has null means and n_days of 0. The maximum span is
+        7320 days and there is no pagination. A known station with no rows in the range returns empty arrays. Reads
+        mart_aq_trend_monthly; when that mart is not declared in the manifest the endpoint returns 503.
+      operationId: getAqTrend
+      parameters:
+        - name: station_id
+          in: query
+          required: true
+          description: Station identifier from the manifest stations catalogue (for example BG0051A).
+          schema:
+            type: string
+            example: "BG0051A"
+        - name: from
+          in: query
+          required: true
+          description: Start date (YYYY-MM-DD) in UTC, inclusive.
+          schema:
+            type: string
+            example: "2025-05-01"
+        - name: to
+          in: query
+          required: true
+          description: End date (YYYY-MM-DD) in UTC, inclusive. Maximum span is 7320 days.
+          schema:
+            type: string
+            example: "2026-10-31"
+        - name: pollutant
+          in: query
+          required: false
+          description: Air quality pollutant identifier. Defaults to pm10 when omitted.
+          schema:
+            type: string
+            enum:
+              - pm2_5
+              - pm10
+              - no2
+            default: "pm10"
+            example: "pm10"
+      responses:
+        "200":
+          description: Parallel arrays of monthly means
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AqTrendResponse"
+        "404":
+          description: Unknown station
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "422":
+          description: Validation error (bad parameter, from after to, or range > 7320 days)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: mart_aq_trend_monthly is not declared in the current manifest
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /api/v1/aq/risk:
+    get:
+      summary: Daily exceedance probability per station
+      description: >-
+        Returns the probability that the label described in the model card occurs on each target date,
+        with the split the row belongs to and, once known, the actual outcome. Rows are keyed by target
+        date, which follows the same day convention as /api/v1/aq/daily (EEA day, UTC+1); issued_at is the
+        UTC time the probability was produced. In range mode, from and to are required, both inclusive,
+        and the maximum span is 366 days; rows are ordered by target date and there is no pagination.
+        With latest=true, from and to must be omitted and the response holds the single row with the most
+        recent issued_at (ties broken by the latest target date), together with its drivers; split and
+        model_id may still be given to narrow the choice. A known station with no matching rows returns
+        empty arrays (and empty drivers when latest=true). Reads mart_aq_risk_daily, plus
+        mart_aq_risk_drivers when latest=true; when a required mart is not declared in the manifest the
+        endpoint returns 503.
+      operationId: getAqRisk
+      parameters:
+        - name: station_id
+          in: query
+          required: true
+          description: Station identifier from the manifest stations catalogue (for example BG0078A).
+          schema:
+            type: string
+            example: "BG0078A"
+        - name: from
+          in: query
+          required: false
+          description: Start target date (YYYY-MM-DD), inclusive. Required unless latest=true, and not allowed with latest=true.
+          schema:
+            type: string
+            example: "2026-10-14"
+        - name: to
+          in: query
+          required: false
+          description: End target date (YYYY-MM-DD), inclusive. Required unless latest=true, and not allowed with latest=true. Maximum span is 366 days.
+          schema:
+            type: string
+            example: "2026-10-28"
+        - name: split
+          in: query
+          required: false
+          description: Restrict rows to one data split.
+          schema:
+            type: string
+            enum:
+              - train
+              - validation
+              - test
+              - live
+            example: "live"
+        - name: model_id
+          in: query
+          required: false
+          description: Restrict rows to one model. When omitted, rows of every model in the mart are returned.
+          schema:
+            type: string
+            example: "pm10_exceed_gbm_v1"
+        - name: latest
+          in: query
+          required: false
+          description: When true, return only the most recently issued row with its drivers instead of a range.
+          schema:
+            type: boolean
+            default: false
+            example: false
+      responses:
+        "200":
+          description: Parallel arrays of daily risk rows; drivers is present only when latest=true
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AqRiskResponse"
+        "404":
+          description: Unknown station or unknown model
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "422":
+          description: Validation error (bad parameter, missing from or to, from or to combined with latest=true, from after to, or range > 366 days)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: A mart needed by the request is not declared in the current manifest
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /api/v1/model/card:
+    get:
+      summary: Model card
+      description: >-
+        Returns the model card for one model: algorithm, training, validation and test windows, the label
+        definition, input features, test metrics, baseline comparisons, the decision threshold and known
+        limitations. Reads mart_model_card; when that mart is not declared in the manifest the endpoint
+        returns 503.
+      operationId: getModelCard
+      parameters:
+        - name: model_id
+          in: query
+          required: true
+          description: Model identifier, as returned in the model_id array of /api/v1/aq/risk.
+          schema:
+            type: string
+            example: "pm10_exceed_gbm_v1"
+      responses:
+        "200":
+          description: Model card
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelCardResponse"
+        "404":
+          description: Unknown model
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "422":
+          description: Validation error (missing or malformed parameter)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: mart_model_card is not declared in the current manifest
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /api/v1/model/calibration:
+    get:
+      summary: Model calibration bins
+      description: >-
+        Returns reliability-diagram bins for one model, computed on the test split. Bins are ordered by
+        bin_lo, cover the interval from 0 to 1 without gaps, and are half-open [bin_lo, bin_hi) except the
+        last, which includes 1. A bin with n equal to 0 has null predicted_mean and observed_rate. Reads
+        mart_model_calibration; when that mart is not declared in the manifest the endpoint returns 503.
+      operationId: getModelCalibration
+      parameters:
+        - name: model_id
+          in: query
+          required: true
+          description: Model identifier, as returned in the model_id array of /api/v1/aq/risk.
+          schema:
+            type: string
+            example: "pm10_exceed_gbm_v1"
+      responses:
+        "200":
+          description: Parallel arrays of calibration bins
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelCalibrationResponse"
+        "404":
+          description: Unknown model
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "422":
+          description: Validation error (missing or malformed parameter)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: mart_model_calibration is not declared in the current manifest
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+components:
+  schemas:
+    ErrorDetail:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code.
+          example: "NOT_FOUND"
+        message:
+          type: string
+          description: Human-readable error description.
+          example: "Location 'unknown' was not found in catalogue."
+
+    ErrorEnvelope:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorDetail"
+
+    WarehouseMeta:
+      type: object
+      required:
+        - run_id
+        - schema_version
+        - generated_at_utc
+      properties:
+        run_id:
+          type: string
+          description: Pipeline execution identifier.
+          example: "2026-10-07T14-00-00Z-abc123"
+        schema_version:
+          type: string
+          description: Version string of the contract specification.
+          example: "1"
+        generated_at_utc:
+          type: string
+          format: date-time
+          description: ISO-8601 UTC timestamp of generation.
+          example: "2026-10-07T14:05:12Z"
+
+    VariableCatalogueEntry:
+      type: object
+      required:
+        - unit
+        - label
+      properties:
+        unit:
+          type: string
+          description: Physical unit of measurement.
+          example: "ug/m3"
+        label:
+          type: string
+          description: Display label for the variable.
+          example: "PM2.5"
+
+    MartRangeHourly:
+      type: object
+      required:
+        - glob
+        - rows
+        - min_valid_at_utc
+        - max_valid_at_utc
+      properties:
+        glob:
+          type: string
+          example: "mart_weather_aq_hourly/latest/*.parquet"
+        rows:
+          type: integer
+          minimum: 0
+          example: 336
+        min_valid_at_utc:
+          type: string
+          example: "2026-10-14T00:00:00Z"
+        max_valid_at_utc:
+          type: string
+          example: "2026-10-27T23:00:00Z"
+        max_analysis_valid_at_utc:
+          type: string
+          pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$'
+          description: Optional. Latest hour whose source_type is analysis, in the format of max_valid_at_utc. max_valid_at_utc may lie later, in forecast hours. Absent when the mart has no analysis row or the pipeline does not report it.
+          example: "2026-10-27T23:00:00Z"
+
+    MartRangeDaily:
+      type: object
+      required:
+        - glob
+        - rows
+      properties:
+        glob:
+          type: string
+          example: "mart_aq_daily/latest/*.parquet"
+        rows:
+          type: integer
+          minimum: 0
+          example: 42
+        min_day:
+          type: string
+          pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+          description: Optional. First EEA day (YYYY-MM-DD) that has a row in the mart, a gap day included. The daily mart need not overlap the hourly mart in time.
+          example: "2026-10-14"
+        max_day:
+          type: string
+          pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+          description: Optional. Last EEA day (YYYY-MM-DD) that has a row in the mart, a gap day included.
+          example: "2026-10-27"
+
+    MartsCatalogue:
+      type: object
+      description: The two original marts are always present. The marts after them are optional and appear only when the pipeline published them.
+      required:
+        - mart_weather_aq_hourly
+        - mart_aq_daily
+      properties:
+        mart_weather_aq_hourly:
+          $ref: "#/components/schemas/MartRangeHourly"
+        mart_aq_daily:
+          $ref: "#/components/schemas/MartRangeDaily"
+        mart_aq_trend_monthly:
+          $ref: "#/components/schemas/MartRangeMonthly"
+        mart_aq_risk_daily:
+          $ref: "#/components/schemas/MartRangeTargetDate"
+        mart_aq_risk_drivers:
+          $ref: "#/components/schemas/MartRowCount"
+        mart_model_card:
+          $ref: "#/components/schemas/MartRowCount"
+        mart_model_calibration:
+          $ref: "#/components/schemas/MartRowCount"
+
+    MetaResponse:
+      type: object
+      required:
+        - schema_version
+        - run_id
+        - generated_at_utc
+        - attribution
+        - variables
+        - marts
+      properties:
+        schema_version:
+          type: string
+          description: Contract schema version.
+          example: "1"
+        run_id:
+          type: string
+          description: Pipeline run identifier.
+          example: "2026-10-07T14-00-00Z-abc123"
+        generated_at_utc:
+          type: string
+          format: date-time
+          description: ISO-8601 generation time.
+          example: "2026-10-07T14:05:12Z"
+        attribution:
+          type: array
+          items:
+            type: string
+          example:
+            - "Copernicus Atmosphere Monitoring Service (CAMS)"
+            - "Open-Meteo"
+        variables:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/VariableCatalogueEntry"
+        marts:
+          $ref: "#/components/schemas/MartsCatalogue"
+        stations:
+          type: object
+          description: Optional station catalogue keyed by station_id. Present whenever a station-keyed mart is published.
+          additionalProperties:
+            $ref: "#/components/schemas/StationEntry"
+
+    SeriesResponse:
+      type: object
+      required:
+        - variable
+        - unit
+        - location_id
+        - resolution
+        - timestamps
+        - values
+        - warehouse
+        - attribution
+      properties:
+        variable:
+          type: string
+          example: "pm2_5"
+        unit:
+          type: string
+          example: "ug/m3"
+        location_id:
+          type: string
+          example: "plovdiv"
+        resolution:
+          type: string
+          enum:
+            - hourly
+            - daily
+          example: "hourly"
+        source_type:
+          type: string
+          enum:
+            - station
+            - analysis
+            - reanalysis_provisional
+            - reanalysis_final
+            - forecast
+          example: "analysis"
+        timestamps:
+          type: array
+          items:
+            type: integer
+          description: Epoch seconds in UTC, strictly ascending.
+          example:
+            - 1791302400
+            - 1791306000
+        values:
+          type: array
+          items:
+            type: number
+            nullable: true
+          description: Measurement values in parallel with timestamps; null indicates missing data.
+          example:
+            - 12.4
+            - null
+        warehouse:
+          $ref: "#/components/schemas/WarehouseMeta"
+        attribution:
+          type: array
+          items:
+            type: string
+          example:
+            - "Copernicus Atmosphere Monitoring Service (CAMS)"
+            - "Open-Meteo"
+
+    DailyAqResponse:
+      type: object
+      required:
+        - pollutant
+        - location_id
+        - days
+        - mean
+        - valid_hours
+        - is_valid_day
+        - warehouse
+        - attribution
+      properties:
+        pollutant:
+          type: string
+          example: "pm10"
+        location_id:
+          type: string
+          example: "plovdiv"
+        days:
+          type: array
+          items:
+            type: string
+            format: date
+          description: Calendar date under EEA convention (UTC+1, YYYY-MM-DD).
+          example:
+            - "2026-10-14"
+            - "2026-10-15"
+        mean:
+          type: array
+          items:
+            type: number
+            nullable: true
+          description: Daily arithmetic mean of valid hourly readings.
+          example:
+            - 22.4
+            - 18.1
+        valid_hours:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 24
+          description: Count of valid hourly readings (0 to 24).
+          example:
+            - 24
+            - 17
+        is_valid_day:
+          type: array
+          items:
+            type: boolean
+          description: EEA regulatory compliance validity flag, true when valid_hours >= 18.
+          example:
+            - true
+            - false
+        warehouse:
+          $ref: "#/components/schemas/WarehouseMeta"
+        attribution:
+          type: array
+          items:
+            type: string
+          example:
+            - "Copernicus Atmosphere Monitoring Service (CAMS)"
+
+    StationEntry:
+      type: object
+      required:
+        - label
+        - station_type
+        - area_type
+        - location_id
+      properties:
+        label:
+          type: string
+          description: Display name of the station.
+          example: "Kamenitsa"
+        station_type:
+          type: string
+          description: Station classification (for example background or traffic).
+          example: "background"
+        area_type:
+          type: string
+          description: Area classification (for example urban).
+          example: "urban"
+        location_id:
+          type: string
+          description: Location the station belongs to.
+          example: "plovdiv"
+
+    MartRowCount:
+      type: object
+      required:
+        - glob
+        - rows
+      properties:
+        glob:
+          type: string
+          example: "mart_model_card/latest/*.parquet"
+        rows:
+          type: integer
+          minimum: 0
+          example: 2
+
+    MartRangeMonthly:
+      type: object
+      required:
+        - glob
+        - rows
+        - min_month
+        - max_month
+      properties:
+        glob:
+          type: string
+          example: "mart_aq_trend_monthly/latest/*.parquet"
+        rows:
+          type: integer
+          minimum: 0
+          example: 50
+        min_month:
+          type: string
+          description: First day of the earliest month in the mart (YYYY-MM-DD).
+          example: "2025-05-01"
+        max_month:
+          type: string
+          description: First day of the latest month in the mart (YYYY-MM-DD).
+          example: "2026-10-01"
+
+    MartRangeTargetDate:
+      type: object
+      required:
+        - glob
+        - rows
+        - min_target_date
+        - max_target_date
+      properties:
+        glob:
+          type: string
+          example: "mart_aq_risk_daily/latest/*.parquet"
+        rows:
+          type: integer
+          minimum: 0
+          example: 78
+        min_target_date:
+          type: string
+          description: Earliest target date in the mart (YYYY-MM-DD).
+          example: "2025-06-24"
+        max_target_date:
+          type: string
+          description: Latest target date in the mart (YYYY-MM-DD).
+          example: "2026-10-28"
+
+    AqTrendResponse:
+      type: object
+      required:
+        - station_id
+        - pollutant
+        - unit
+        - months
+        - observed_mean
+        - weather_adjusted_mean
+        - adjusted_lo
+        - adjusted_hi
+        - n_days
+        - warehouse
+        - attribution
+      properties:
+        station_id:
+          type: string
+          example: "BG0051A"
+        pollutant:
+          type: string
+          enum:
+            - pm2_5
+            - pm10
+            - no2
+          example: "pm10"
+        unit:
+          type: string
+          description: Unit of all four mean arrays, from the manifest variable catalogue.
+          example: "ug/m3"
+        months:
+          type: array
+          items:
+            type: string
+            format: date
+          description: First day of each month (YYYY-MM-DD), strictly ascending.
+          example:
+            - "2026-08-01"
+            - "2026-09-01"
+        observed_mean:
+          type: array
+          items:
+            type: number
+            nullable: true
+          description: Mean of the valid daily means in the month; null when n_days is 0.
+          example:
+            - 24.1
+            - 27.8
+        weather_adjusted_mean:
+          type: array
+          items:
+            type: number
+            nullable: true
+          description: Mean after removing the estimated effect of weather; null when it could not be estimated.
+          example:
+            - 25.3
+            - 26.9
+        adjusted_lo:
+          type: array
+          items:
+            type: number
+            nullable: true
+          description: Lower bound of the interval around weather_adjusted_mean; null exactly when it is null.
+          example:
+            - 23.9
+            - 25.2
+        adjusted_hi:
+          type: array
+          items:
+            type: number
+            nullable: true
+          description: Upper bound of the interval around weather_adjusted_mean; null exactly when it is null.
+          example:
+            - 26.8
+            - 28.7
+        n_days:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 31
+          description: Number of valid days that contributed to the month.
+          example:
+            - 29
+            - 28
+        warehouse:
+          $ref: "#/components/schemas/WarehouseMeta"
+        attribution:
+          type: array
+          items:
+            type: string
+          example:
+            - "Copernicus Atmosphere Monitoring Service (CAMS)"
+            - "Open-Meteo"
+
+    AqRiskDrivers:
+      type: object
+      description: Top feature contributions for the single row returned by latest=true, ordered by rank.
+      required:
+        - feature
+        - contribution
+        - rank
+      properties:
+        feature:
+          type: array
+          items:
+            type: string
+          description: Feature names, as listed in the model card.
+          example:
+            - "pm10_lag_1d"
+            - "wind_gusts_10m_forecast_max"
+        contribution:
+          type: array
+          items:
+            type: number
+          description: Signed contribution to the prediction on the log-odds scale. Positive values raise the probability.
+          example:
+            - 0.62
+            - -0.41
+        rank:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+          description: Rank by absolute contribution, 1 being the largest.
+          example:
+            - 1
+            - 2
+
+    AqRiskResponse:
+      type: object
+      required:
+        - station_id
+        - target_dates
+        - issued_at
+        - probability
+        - label_id
+        - split
+        - actual_label
+        - model_id
+        - warehouse
+        - attribution
+      properties:
+        station_id:
+          type: string
+          example: "BG0078A"
+        target_dates:
+          type: array
+          items:
+            type: string
+            format: date
+          description: Day being predicted (YYYY-MM-DD, EEA day), ascending.
+          example:
+            - "2026-10-27"
+            - "2026-10-28"
+        issued_at:
+          type: array
+          items:
+            type: string
+            format: date-time
+          description: UTC time each probability was produced (ISO-8601 with a trailing Z).
+          example:
+            - "2026-10-26T06:00:00Z"
+            - "2026-10-27T06:00:00Z"
+        probability:
+          type: array
+          items:
+            type: number
+            minimum: 0
+            maximum: 1
+          description: Predicted probability that the label occurs on the target date.
+          example:
+            - 0.31
+            - 0.44
+        label_id:
+          type: array
+          items:
+            type: string
+          description: Identifier of the label that was predicted. Its text is in the model card.
+          example:
+            - "pm10_daily_mean_gt_50"
+            - "pm10_daily_mean_gt_50"
+        split:
+          type: array
+          items:
+            type: string
+            enum:
+              - train
+              - validation
+              - test
+              - live
+          example:
+            - "live"
+            - "live"
+        actual_label:
+          type: array
+          items:
+            type: integer
+            nullable: true
+            minimum: 0
+            maximum: 1
+          description: Observed outcome (1 when the label occurred, 0 when not); null until it is known or when the day has too little data to decide.
+          example:
+            - null
+            - null
+        model_id:
+          type: array
+          items:
+            type: string
+          example:
+            - "pm10_exceed_gbm_v1"
+            - "pm10_exceed_gbm_v1"
+        drivers:
+          $ref: "#/components/schemas/AqRiskDrivers"
+        warehouse:
+          $ref: "#/components/schemas/WarehouseMeta"
+        attribution:
+          type: array
+          items:
+            type: string
+          example:
+            - "Copernicus Atmosphere Monitoring Service (CAMS)"
+            - "Open-Meteo"
+
+    ModelWindows:
+      type: object
+      required:
+        - train_start
+        - train_end
+        - validation_start
+        - validation_end
+        - test_start
+        - test_end
+      properties:
+        train_start:
+          type: string
+          format: date
+          example: "2022-01-01"
+        train_end:
+          type: string
+          format: date
+          example: "2025-06-30"
+        validation_start:
+          type: string
+          format: date
+          example: "2025-07-01"
+        validation_end:
+          type: string
+          format: date
+          example: "2025-12-31"
+        test_start:
+          type: string
+          format: date
+          example: "2026-01-01"
+        test_end:
+          type: string
+          format: date
+          example: "2026-10-13"
+
+    ModelMetrics:
+      type: object
+      description: Metrics on the test window. A metric that could not be computed is null.
+      required:
+        - roc_auc_test
+        - pr_auc_test
+        - brier_test
+        - precision_test
+        - recall_test
+      properties:
+        roc_auc_test:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 1
+          example: 0.842
+        pr_auc_test:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 1
+          example: 0.611
+        brier_test:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 1
+          example: 0.118
+        precision_test:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 1
+          description: Precision at the model threshold.
+          example: 0.58
+        recall_test:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 1
+          description: Recall at the model threshold.
+          example: 0.71
+
+    ModelBaselines:
+      type: object
+      description: ROC AUC of simple reference predictors on the same test window. Null when not computed.
+      required:
+        - roc_auc_test_climatology
+        - roc_auc_test_persistence
+      properties:
+        roc_auc_test_climatology:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 1
+          example: 0.676
+        roc_auc_test_persistence:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 1
+          example: 0.771
+
+    ModelCardResponse:
+      type: object
+      required:
+        - model_id
+        - algorithm
+        - trained_at
+        - windows
+        - label_id
+        - label_text
+        - features
+        - uses_forecast_weather
+        - threshold
+        - metrics
+        - baselines
+        - limitations
+        - warehouse
+        - attribution
+      properties:
+        model_id:
+          type: string
+          example: "pm10_exceed_gbm_v1"
+        algorithm:
+          type: string
+          example: "gradient_boosted_trees"
+        trained_at:
+          type: string
+          format: date-time
+          description: UTC time training finished (ISO-8601 with a trailing Z).
+          example: "2025-12-31T21:15:00Z"
+        windows:
+          $ref: "#/components/schemas/ModelWindows"
+        label_id:
+          type: string
+          example: "pm10_daily_mean_gt_50"
+        label_text:
+          type: string
+          description: Plain-language definition of the label.
+          example: "Daily mean PM10 above 50 ug/m3 on the target day"
+        features:
+          type: array
+          items:
+            type: string
+          example:
+            - "pm10_lag_1d"
+            - "wind_gusts_10m_forecast_max"
+        uses_forecast_weather:
+          type: boolean
+          description: True when some inputs are weather forecasts available at issue time rather than observed or analysed weather.
+          example: true
+        threshold:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Probability at or above which the model counts a day as a predicted exceedance.
+          example: 0.35
+        metrics:
+          $ref: "#/components/schemas/ModelMetrics"
+        baselines:
+          $ref: "#/components/schemas/ModelBaselines"
+        limitations:
+          type: string
+          description: Known limitations, in plain language.
+          example: "Trained on two stations in one city."
+        warehouse:
+          $ref: "#/components/schemas/WarehouseMeta"
+        attribution:
+          type: array
+          items:
+            type: string
+          example:
+            - "Copernicus Atmosphere Monitoring Service (CAMS)"
+            - "Open-Meteo"
+
+    ModelCalibrationResponse:
+      type: object
+      required:
+        - model_id
+        - bin_lo
+        - bin_hi
+        - predicted_mean
+        - observed_rate
+        - n
+        - warehouse
+        - attribution
+      properties:
+        model_id:
+          type: string
+          example: "pm10_exceed_gbm_v1"
+        bin_lo:
+          type: array
+          items:
+            type: number
+            minimum: 0
+            maximum: 1
+          description: Lower edge of each bin, ascending.
+          example:
+            - 0.0
+            - 0.1
+        bin_hi:
+          type: array
+          items:
+            type: number
+            minimum: 0
+            maximum: 1
+          description: Upper edge of each bin; equals the next bin_lo.
+          example:
+            - 0.1
+            - 0.2
+        predicted_mean:
+          type: array
+          items:
+            type: number
+            nullable: true
+            minimum: 0
+            maximum: 1
+          description: Mean predicted probability of the test days in the bin; null when n is 0.
+          example:
+            - 0.048
+            - 0.151
+        observed_rate:
+          type: array
+          items:
+            type: number
+            nullable: true
+            minimum: 0
+            maximum: 1
+          description: Share of the test days in the bin on which the label occurred; null when n is 0.
+          example:
+            - 0.0462
+            - 0.1635
+        n:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+          description: Number of test days in the bin.
+          example:
+            - 238
+            - 104
+        warehouse:
+          $ref: "#/components/schemas/WarehouseMeta"
+        attribution:
+          type: array
+          items:
+            type: string
+          example:
+            - "Copernicus Atmosphere Monitoring Service (CAMS)"
+            - "Open-Meteo"

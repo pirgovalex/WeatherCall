@@ -1,0 +1,52 @@
+[project]
+name = "plovdiv-warehouse"
+version = "0.1.0"
+description = "Plovdiv weather and air quality data pipeline"
+requires-python = ">=3.12"
+dependencies = [
+    "requests>=2.31.0",
+    "dagster>=1.13.0",
+    "duckdb>=1.0.0",
+    "dbt-duckdb>=1.8.0",
+    "pandera>=0.20.0",
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.0.0"
+]
+
+# Everything the contracts and the test suite import. Lower bounds are the versions the
+# suite last passed on (pandas 3.0, pyarrow 25, numpy 2.5, pytest 9.1). The risk model tests
+# (tests/test_ml_*.py) also need scikit-learn and joblib.
+[project.optional-dependencies]
+ml = [
+    "pandas>=2.2",
+    "pyarrow>=15.0",
+    "numpy>=1.26",
+    "scikit-learn>=1.5",
+    "joblib>=1.4",
+]
+dev = [
+    "pandas>=3.0",
+    "pyarrow>=25.0",
+    "numpy>=2.5",
+    "scikit-learn>=1.5",
+    "joblib>=1.4",
+    "pyyaml>=6.0",
+    "jsonschema>=4.26",
+    "openapi-spec-validator>=0.9",
+    "pytest>=9.0",
+    "tzdata>=2026.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/plovdiv"]
+
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore:.*Importing pandas-specific classes and functions.*:FutureWarning:pandera.*",
+]

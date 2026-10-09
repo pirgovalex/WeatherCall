@@ -1,0 +1,49 @@
+{
+  "name": "plovdiv-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "gen:api": "openapi-typescript contracts/openapi.yaml -o src/api/schema.d.ts",
+    "export:mocks": "python scripts/export_mock_data.py"
+  },
+  "dependencies": {
+    "@fontsource-variable/atkinson-hyperlegible-next": "^5.3.0",
+    "@solidjs/router": "^1.0.0",
+    "@tanstack/solid-query": "^5.104.1",
+    "solid-js": "^1.9.5",
+    "uplot": "^1.6.32"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@solidjs/testing-library": "^0.8.10",
+    "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/node": "^22.20.5",
+    "eslint": "^10.12.0",
+    "eslint-plugin-solid": "^0.18.1",
+    "globals": "^17.13.0",
+    "jsdom": "^30.1.2",
+    "msw": "^3.0.2",
+    "openapi-typescript": "^7.13.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.71.1",
+    "vite": "^6.3.5",
+    "vite-plugin-solid": "^2.11.6",
+    "vitest": "^5.0.3"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
+  }
+}

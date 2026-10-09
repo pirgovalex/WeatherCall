@@ -1,0 +1,40 @@
+# Whole Plovdiv stack: capture, API and dashboard.
+# Start:  docker compose up -d --build     Dashboard: http://localhost:8080
+name: plovdiv
+
+services:
+  ingest:
+    build: ../plovdiv-warehouse
+    image: plovdiv-warehouse
+    restart: unless-stopped
+    volumes:
+      - ../plovdiv-warehouse/src:/app/src:ro
+      - ../plovdiv-warehouse/scripts:/app/scripts:ro
+      - ../plovdiv-warehouse/models:/app/models:ro
+      - ../plovdiv-warehouse/.env:/app/.env:ro
+      - ../plovdiv-warehouse/data:/app/data
+
+  backend:
+    build: ../plovdiv-backend
+    image: plovdiv-backend
+    restart: unless-stopped
+    environment:
+      ALLOWED_ORIGINS: http://localhost:8080
+    volumes:
+      - ../plovdiv-warehouse/data/marts:/marts:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    build: ../plovdiv-frontend
+    image: plovdiv-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8080:80"

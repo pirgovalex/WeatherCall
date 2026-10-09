@@ -1,0 +1,142 @@
+@import "tailwindcss";
+
+/*
+ * Colour tokens. Components use the semantic utilities below (bg-surface,
+ * text-ink, border-rule, ...) and never raw colours, so the light and dark
+ * themes are switched in this one place. Dark values apply when the viewer
+ * picked dark, or when they have not picked and the system is dark.
+ * Series and direction colours were checked against the chart surface with
+ * the palette validator (CVD and contrast).
+ */
+:root {
+  color-scheme: light;
+  --c-page: #eef2f5;
+  --c-surface: #fbfcfd;
+  --c-sunken: #e4eaef;
+  --c-ink: #0e1a26;
+  --c-ink-2: #42546a;
+  --c-ink-3: #55677b;
+  --c-rule: #d0d9e2;
+  --c-grid: #e3e9ee;
+  --c-primary: #1c5cab;
+  --c-on-primary: #ffffff;
+  --c-primary-soft: #dce9f8;
+  --c-s1: #2a78d6;
+  --c-s2: #eb6834;
+  --c-up: #d03b3b;
+  --c-down: #2a78d6;
+  --c-notice: #fff3d6;
+  --c-notice-edge: #b97800;
+  --c-info: #e3edf9;
+  --c-info-edge: #5c86b8;
+  --c-danger: #fbe6e4;
+  --c-danger-edge: #b5382e;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --c-page: #0b1117;
+    --c-surface: #131b24;
+    --c-sunken: #0e151c;
+    --c-ink: #eef3f8;
+    --c-ink-2: #b4c1ce;
+    --c-ink-3: #93a3b4;
+    --c-rule: #263444;
+    --c-grid: #1d2833;
+    --c-primary: #6da7ec;
+    --c-on-primary: #0b1117;
+    --c-primary-soft: #1b2c42;
+    --c-s1: #3987e5;
+    --c-s2: #d95926;
+    --c-up: #e66767;
+    --c-down: #3987e5;
+    --c-notice: #2b2410;
+    --c-notice-edge: #d9a21b;
+    --c-info: #16263a;
+    --c-info-edge: #5c86b8;
+    --c-danger: #34161a;
+    --c-danger-edge: #e66767;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --c-page: #0b1117;
+  --c-surface: #131b24;
+  --c-sunken: #0e151c;
+  --c-ink: #eef3f8;
+  --c-ink-2: #b4c1ce;
+  --c-ink-3: #93a3b4;
+  --c-rule: #263444;
+  --c-grid: #1d2833;
+  --c-primary: #6da7ec;
+  --c-on-primary: #0b1117;
+  --c-primary-soft: #1b2c42;
+  --c-s1: #3987e5;
+  --c-s2: #d95926;
+  --c-up: #e66767;
+  --c-down: #3987e5;
+  --c-notice: #2b2410;
+  --c-notice-edge: #d9a21b;
+  --c-info: #16263a;
+  --c-info-edge: #5c86b8;
+  --c-danger: #34161a;
+  --c-danger-edge: #e66767;
+}
+
+@theme inline {
+  --font-sans: "Atkinson Hyperlegible Next Variable", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --color-page: var(--c-page);
+  --color-surface: var(--c-surface);
+  --color-sunken: var(--c-sunken);
+  --color-ink: var(--c-ink);
+  --color-ink-2: var(--c-ink-2);
+  --color-ink-3: var(--c-ink-3);
+  --color-rule: var(--c-rule);
+  --color-grid: var(--c-grid);
+  --color-primary: var(--c-primary);
+  --color-on-primary: var(--c-on-primary);
+  --color-primary-soft: var(--c-primary-soft);
+  --color-s1: var(--c-s1);
+  --color-s2: var(--c-s2);
+  --color-up: var(--c-up);
+  --color-down: var(--c-down);
+  --color-notice: var(--c-notice);
+  --color-notice-edge: var(--c-notice-edge);
+  --color-info: var(--c-info);
+  --color-info-edge: var(--c-info-edge);
+  --color-danger: var(--c-danger);
+  --color-danger-edge: var(--c-danger-edge);
+}
+
+@layer base {
+  html {
+    background: var(--c-page);
+    color: var(--c-ink);
+    font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    min-height: 100vh;
+    background: var(--c-page);
+    line-height: 1.55;
+    font-feature-settings: "kern", "liga";
+  }
+  :focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* uPlot draws its own cursor and axes; keep its chrome quiet and on the tokens. */
+.u-over { cursor: crosshair; }
+.uplot { font-family: var(--font-sans); }
+.u-legend { display: none; }

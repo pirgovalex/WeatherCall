@@ -1,0 +1,28 @@
+# Secrets and local configuration (.env.example stays tracked)
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Pipeline data: landing, bronze, marts and the dbt-written database are all rebuildable
+# or private to this machine. contracts/fixtures is NOT under data/ and stays tracked.
+data/
+*.duckdb
+*.duckdb.wal
+
+# dbt and Dagster local state
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+.dagster/
+
+_to_delete/
+
+# Architecture diagrams for the final write-up (generated, local only)
+manifest/

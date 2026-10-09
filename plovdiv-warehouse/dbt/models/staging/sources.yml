@@ -1,0 +1,27 @@
+version: 2
+
+sources:
+  - name: landing
+    meta:
+      external_location: "read_json_auto('../data/landing/source={source_name}/endpoint={name}/*/*.json.gz')"
+    tables:
+      - name: openmeteo_forecast
+        meta:
+          external_location: >
+            read_json_auto('../data/landing/source=openmeteo/endpoint=forecast/*/*.json.gz',
+            columns={{ '{{' }}
+            '_audit': 'STRUCT(fetched_at_utc VARCHAR)',
+            'hourly': 'STRUCT(time VARCHAR[], temperature_2m DOUBLE[], wind_gusts_10m DOUBLE[], precipitation DOUBLE[])',
+            'hourly_units': 'STRUCT(temperature_2m VARCHAR, wind_gusts_10m VARCHAR, precipitation VARCHAR)'
+            {{ '}}' }})
+      - name: cams_aq
+        meta:
+          external_location: >
+            read_json_auto('../data/landing/source=cams/endpoint=air_quality/*/*.json.gz',
+            columns={{ '{{' }}
+            '_audit': 'STRUCT(fetched_at_utc VARCHAR)',
+            'hourly': 'STRUCT(time VARCHAR[], pm10 DOUBLE[], pm2_5 DOUBLE[], nitrogen_dioxide DOUBLE[])'
+            {{ '}}' }})
+      - name: eea_daily
+        meta:
+          external_location: "read_parquet('../data/landing/source=eea/endpoint=e1a_daily/*/*.parquet', union_by_name=true)"

@@ -1,0 +1,226 @@
+{
+  "model": "pm10_risk_logreg_live",
+  "variant": "live",
+  "station_id": "BG0051A",
+  "task": "P(label = 1 for day t+1 | data known at the end of day t)",
+  "label": {
+    "id": "pm10_gt_p75_same_month_prev3y_v1",
+    "text": "1 if the PM10 daily mean on day t+1 is above the 75th percentile of the PM10 daily means of the same calendar month in the three calendar years immediately before the year of t+1 (strictly earlier data only), else 0.",
+    "quantile": 0.75,
+    "history_years": 3
+  },
+  "secondary_label_reporting_only": "PM10 daily mean above 50 ug/m3",
+  "feature_names": [
+    "log_pm10_t",
+    "log_pm10_t_minus_1",
+    "log_pm10_mean3",
+    "log_pm10_mean7",
+    "month_sin",
+    "month_cos",
+    "is_weekend",
+    "heating_season",
+    "temp_mean_c_t",
+    "temp_range_c_t",
+    "log1p_precip_mm_t",
+    "wind_max_ms_t",
+    "rh_mean_pct_t",
+    "pressure_mean_hpa_t"
+  ],
+  "scaler_mean": [
+    3.466628949858287,
+    3.4637130997021695,
+    3.502374716033048,
+    3.5312816412883095,
+    0.047900332978666006,
+    0.025147081726472193,
+    0.28336620644312954,
+    0.5305719921104537,
+    13.648060486522025,
+    9.432018408941484,
+    0.5183847496970242,
+    4.11207100591716,
+    63.9612097304405,
+    996.6702827087443
+  ],
+  "scaler_scale": [
+    0.587888403455633,
+    0.5889316442140181,
+    0.5250056868353145,
+    0.4696017262406441,
+    0.7131295003947562,
+    0.6989416986043261,
+    0.45063266580348926,
+    0.4990644780971677,
+    8.751594830836629,
+    3.4209962660974305,
+    0.8482277650666591,
+    1.5122658644978026,
+    15.123656668989918,
+    6.567592060188932
+  ],
+  "coefficients_standardised": [
+    1.542383969916936,
+    -0.3604740285127126,
+    0.25143493919344867,
+    0.4272279013228251,
+    0.02549964530599621,
+    -1.3166660514949144,
+    -0.1516783749870597,
+    0.21474759738629517,
+    0.02847479124993902,
+    0.42605699882183873,
+    -0.18168878931066515,
+    -0.22767558474518032,
+    -0.0933963047019784,
+    0.412891869882269
+  ],
+  "intercept_standardised": -0.8740160252244221,
+  "coefficients_raw_scale": [
+    2.623599922792723,
+    -0.6120812696247582,
+    0.478918506024335,
+    0.9097664626213388,
+    0.035757383885929216,
+    -1.8837995416843556,
+    -0.3365898357958879,
+    0.43030030549376,
+    0.0032536688226935326,
+    0.1245417900756354,
+    -0.2141981161114042,
+    -0.15055261782344564,
+    -0.006175510774023421,
+    0.06286807495019585
+  ],
+  "intercept_raw_scale": -75.57896659585961,
+  "scoring": "probability = 1 / (1 + exp(-(intercept + sum_i coefficient_i * (x_i - scaler_mean_i) / scaler_scale_i)))",
+  "estimator": {
+    "penalty": "l2",
+    "C": 0.1,
+    "class_weight": "balanced",
+    "solver": "lbfgs",
+    "max_iter": 10000,
+    "n_iter": 16
+  },
+  "threshold": {
+    "value": 0.54,
+    "rule": "maximise F1 on the validation rows over thresholds 0.01..0.99",
+    "positive_if": "probability >= value"
+  },
+  "periods_by_target_date": {
+    "train": [
+      "2016-01-01",
+      "2020-12-31"
+    ],
+    "validation": [
+      "2021-01-01",
+      "2022-12-31"
+    ],
+    "test": [
+      "2023-01-01",
+      "2025-12-31"
+    ]
+  },
+  "rows": {
+    "train": {
+      "n_rows": 1521,
+      "first_target_date": "2016-01-01",
+      "last_target_date": "2020-12-31",
+      "dropped_incomplete_feature_rows": 290
+    },
+    "validation": {
+      "n_rows": 706,
+      "first_target_date": "2021-01-01",
+      "last_target_date": "2022-12-31",
+      "dropped_incomplete_feature_rows": 18
+    },
+    "test": {
+      "n_rows": 1064,
+      "first_target_date": "2023-01-01",
+      "last_target_date": "2025-12-31",
+      "dropped_incomplete_feature_rows": 22
+    }
+  },
+  "uses_next_day_weather": false,
+  "notes": [
+    "ERA5 days are Europe/Sofia local calendar days; EEA daily values are the daily means as reported by Bulgaria. Both are joined on the calendar date, so the day alignment is approximate."
+  ],
+  "sklearn_version": "1.9.1",
+  "trained_at": "2026-10-07",
+  "provenance": {
+    "input_files": [
+      {
+        "role": "pm10_kamenitsa_daily",
+        "file": "SPO-BG0051A_00005_100.parquet",
+        "partition": "fetch_date=2026-10-07",
+        "size_bytes": 83708,
+        "sha256": "2bba88856222a5301ed728c080fbae8bcd8eee47f75d712f7bdda2c2a0b78a80"
+      },
+      {
+        "role": "pm25_kamenitsa_daily",
+        "file": "SPO-BG0051A_06001_100.parquet",
+        "partition": "fetch_date=2026-10-07",
+        "size_bytes": 63371,
+        "sha256": "7bb7e97c1e89f2e626811ec93440163562f24e1432d780d454d636d0824268d1"
+      },
+      {
+        "role": "era5_archive_daily",
+        "file": "archive_2013-01-01_2025-12-31.json.gz",
+        "partition": "fetch_date=2026-10-07",
+        "size_bytes": 102406,
+        "sha256": "6a2a148a4aa3b1b732951e13f36c956827bb538c06a078647be8129c4a19dce4"
+      }
+    ],
+    "landed_but_not_used": [
+      "SPO-BG0078A_00005_100.parquet (Trakia PM10, secondary station)"
+    ],
+    "weather_request": {
+      "endpoint": "https://archive-api.open-meteo.com/v1/archive",
+      "latitude": 42.15,
+      "longitude": 24.75,
+      "start_date": "2013-01-01",
+      "end_date": "2025-12-31",
+      "timezone": "Europe/Sofia",
+      "wind_speed_unit": "ms",
+      "daily": [
+        "temperature_2m_mean",
+        "temperature_2m_max",
+        "temperature_2m_min",
+        "precipitation_sum",
+        "wind_speed_10m_max",
+        "wind_gusts_10m_max",
+        "wind_direction_10m_dominant",
+        "shortwave_radiation_sum",
+        "relative_humidity_2m_mean",
+        "surface_pressure_mean",
+        "pressure_msl_mean",
+        "cloud_cover_mean",
+        "dew_point_2m_mean"
+      ]
+    },
+    "weather_response": {
+      "latitude": 42.14411,
+      "longitude": 24.70073,
+      "elevation_m": 166.0,
+      "timezone": "Europe/Sofia",
+      "utc_offset_seconds": 10800,
+      "daily_units": {
+        "time": "iso8601",
+        "temperature_2m_mean": "°C",
+        "temperature_2m_max": "°C",
+        "temperature_2m_min": "°C",
+        "precipitation_sum": "mm",
+        "wind_speed_10m_max": "m/s",
+        "wind_gusts_10m_max": "m/s",
+        "wind_direction_10m_dominant": "°",
+        "shortwave_radiation_sum": "MJ/m²",
+        "relative_humidity_2m_mean": "%",
+        "surface_pressure_mean": "hPa",
+        "pressure_msl_mean": "hPa",
+        "cloud_cover_mean": "%",
+        "dew_point_2m_mean": "°C"
+      },
+      "n_days": 4748
+    },
+    "station_filter": "Validity == 1 and Value >= 0; Value cast with pd.to_numeric"
+  }
+}

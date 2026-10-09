@@ -1,0 +1,28 @@
+# Local environments and tooling
+.venv/
+.git/
+.github/
+.vscode/
+.agents/
+**/__pycache__/
+**/*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.dagster/
+
+# Secrets: passed at runtime through env_file, never baked into the image
+.env
+.env.*
+!.env.example
+
+# Data is mounted as a volume at runtime
+data/
+*.duckdb
+*.duckdb.wal
+
+# Generated output
+manifest/
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+_to_delete/

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="Air quality risk, hourly readings and model reliability for Plovdiv." />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Plovdiv air</title>
+    <script>
+      try {
+        var t = localStorage.getItem("plovdiv-theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>

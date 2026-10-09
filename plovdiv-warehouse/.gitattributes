@@ -1,0 +1,14 @@
+# Fixture bytes must be identical on every OS (a test hashes them against a fresh generator run).
+* text=auto
+*.json text eol=lf
+*.yaml text eol=lf
+contracts/fixtures/*.md text eol=lf
+*.parquet binary
+*.gz binary
+*.ps1 text eol=crlf
+# Files used inside Linux containers must keep LF line endings on Windows checkouts too
+Dockerfile text eol=lf
+.dockerignore text eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
+*.joblib binary

@@ -1,0 +1,259 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WarehouseManifest",
+  "description": "Schema for warehouse pipeline manifest.json declaring execution metadata, variable catalogue, and mart globs.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "generated_at_utc",
+    "attribution",
+    "variables",
+    "marts"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1",
+      "description": "Version string of the contract specification."
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique pipeline execution identifier."
+    },
+    "generated_at_utc": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 UTC timestamp when manifest and marts were generated."
+    },
+    "attribution": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "description": "Attribution strings for open data sources."
+    },
+    "variables": {
+      "type": "object",
+      "required": [
+        "pm2_5",
+        "pm10",
+        "no2",
+        "temperature_2m",
+        "wind_gusts_10m",
+        "precipitation"
+      ],
+      "properties": {
+        "pm2_5": {
+          "type": "object",
+          "required": ["unit", "label"],
+          "properties": {
+            "unit": { "type": "string" },
+            "label": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "pm10": {
+          "type": "object",
+          "required": ["unit", "label"],
+          "properties": {
+            "unit": { "type": "string" },
+            "label": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "no2": {
+          "type": "object",
+          "required": ["unit", "label"],
+          "properties": {
+            "unit": { "type": "string" },
+            "label": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "temperature_2m": {
+          "type": "object",
+          "required": ["unit", "label"],
+          "properties": {
+            "unit": { "type": "string" },
+            "label": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "wind_gusts_10m": {
+          "type": "object",
+          "required": ["unit", "label"],
+          "properties": {
+            "unit": { "type": "string" },
+            "label": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "precipitation": {
+          "type": "object",
+          "required": ["unit", "label"],
+          "properties": {
+            "unit": { "type": "string" },
+            "label": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["unit", "label"],
+        "properties": {
+          "unit": { "type": "string" },
+          "label": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "stations": {
+      "type": "object",
+      "minProperties": 1,
+      "description": "Optional catalogue of air-quality stations, keyed by station_id. Required whenever mart_aq_trend_monthly, mart_aq_risk_daily or mart_aq_risk_drivers is declared.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["label", "station_type", "area_type", "location_id"],
+        "properties": {
+          "label": { "type": "string", "minLength": 1 },
+          "station_type": { "type": "string", "minLength": 1 },
+          "area_type": { "type": "string", "minLength": 1 },
+          "location_id": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "marts": {
+      "type": "object",
+      "required": [
+        "mart_weather_aq_hourly",
+        "mart_aq_daily"
+      ],
+      "properties": {
+        "mart_weather_aq_hourly": {
+          "type": "object",
+          "required": [
+            "glob",
+            "rows",
+            "min_valid_at_utc",
+            "max_valid_at_utc"
+          ],
+          "properties": {
+            "glob": { "type": "string" },
+            "rows": { "type": "integer", "minimum": 0 },
+            "min_valid_at_utc": { "type": "string" },
+            "max_valid_at_utc": { "type": "string" },
+            "max_analysis_valid_at_utc": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+              "description": "Optional. Latest valid_at_utc of a row whose source_type is analysis, in the format of max_valid_at_utc. Omitted when the mart has no analysis row. max_valid_at_utc may lie later, in forecast hours."
+            }
+          },
+          "additionalProperties": false
+        },
+        "mart_aq_daily": {
+          "type": "object",
+          "required": [
+            "glob",
+            "rows"
+          ],
+          "properties": {
+            "glob": { "type": "string" },
+            "rows": { "type": "integer", "minimum": 0 },
+            "min_day": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+              "description": "Optional. First EEA day (YYYY-MM-DD) that has a row in the mart, a gap day included. The daily mart need not overlap the hourly mart in time."
+            },
+            "max_day": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+              "description": "Optional. Last EEA day (YYYY-MM-DD) that has a row in the mart, a gap day included."
+            }
+          },
+          "additionalProperties": false
+        },
+        "mart_aq_trend_monthly": {
+          "type": "object",
+          "description": "Optional. Monthly observed and weather-adjusted means per station and pollutant.",
+          "required": ["glob", "rows", "min_month", "max_month"],
+          "properties": {
+            "glob": { "type": "string" },
+            "rows": { "type": "integer", "minimum": 0 },
+            "min_month": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-01$" },
+            "max_month": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-01$" }
+          },
+          "additionalProperties": false
+        },
+        "mart_aq_risk_daily": {
+          "type": "object",
+          "description": "Optional. Daily exceedance probability per station and model. Requires mart_model_card.",
+          "required": ["glob", "rows", "min_target_date", "max_target_date"],
+          "properties": {
+            "glob": { "type": "string" },
+            "rows": { "type": "integer", "minimum": 0 },
+            "min_target_date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+            "max_target_date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+          },
+          "additionalProperties": false
+        },
+        "mart_aq_risk_drivers": {
+          "type": "object",
+          "description": "Optional. Top feature contributions per risk row. Requires mart_aq_risk_daily.",
+          "required": ["glob", "rows"],
+          "properties": {
+            "glob": { "type": "string" },
+            "rows": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "mart_model_card": {
+          "type": "object",
+          "description": "Optional. One row per model with training windows, test metrics and limitations.",
+          "required": ["glob", "rows"],
+          "properties": {
+            "glob": { "type": "string" },
+            "rows": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "mart_model_calibration": {
+          "type": "object",
+          "description": "Optional. Reliability-diagram bins per model, computed on the test split. Requires mart_model_card.",
+          "required": ["glob", "rows"],
+          "properties": {
+            "glob": { "type": "string" },
+            "rows": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "dependencies": {
+        "mart_aq_risk_daily": ["mart_model_card"],
+        "mart_aq_risk_drivers": ["mart_aq_risk_daily"],
+        "mart_model_calibration": ["mart_model_card"]
+      },
+      "additionalProperties": false
+    }
+  },
+  "if": {
+    "required": ["marts"],
+    "properties": {
+      "marts": {
+        "anyOf": [
+          { "required": ["mart_aq_trend_monthly"] },
+          { "required": ["mart_aq_risk_daily"] },
+          { "required": ["mart_aq_risk_drivers"] }
+        ]
+      }
+    }
+  },
+  "then": {
+    "required": ["stations"]
+  },
+  "additionalProperties": false
+}

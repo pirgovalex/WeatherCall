@@ -1,0 +1,2793 @@
+{
+  "schema_version": 1,
+  "trained_at": "2026-10-07",
+  "station_id": "BG0051A",
+  "label": {
+    "id": "pm10_gt_p75_same_month_prev3y_v1",
+    "text": "1 if the PM10 daily mean on day t+1 is above the 75th percentile of the PM10 daily means of the same calendar month in the three calendar years immediately before the year of t+1 (strictly earlier data only), else 0."
+  },
+  "periods_by_target_date": {
+    "train": [
+      "2016-01-01",
+      "2020-12-31"
+    ],
+    "validation": [
+      "2021-01-01",
+      "2022-12-31"
+    ],
+    "test": [
+      "2023-01-01",
+      "2025-12-31"
+    ]
+  },
+  "primary_model": "with_next_day_weather",
+  "deployable_model": "no_next_day_weather",
+  "primary_model_note": "Features ending in _t1 are ERA5 actuals of the target day, used as a stand-in for a perfect weather forecast. Real forecasts are imperfect, so scores of a model that uses them are an optimistic upper bound.",
+  "day_alignment_note": "ERA5 days are Europe/Sofia local calendar days; EEA daily values are the daily means as reported by Bulgaria. Both are joined on the calendar date, so the day alignment is approximate.",
+  "class_balance": {
+    "train": {
+      "primary_label": {
+        "n": 1521,
+        "positives": 258,
+        "negatives": 1263,
+        "positive_rate": 0.16962524654832348
+      },
+      "secondary_label_gt50": {
+        "n": 1521,
+        "positives": 318,
+        "negatives": 1203,
+        "positive_rate": 0.20907297830374755
+      }
+    },
+    "validation": {
+      "primary_label": {
+        "n": 706,
+        "positives": 151,
+        "negatives": 555,
+        "positive_rate": 0.21388101983002833
+      },
+      "secondary_label_gt50": {
+        "n": 706,
+        "positives": 86,
+        "negatives": 620,
+        "positive_rate": 0.12181303116147309
+      }
+    },
+    "test": {
+      "primary_label": {
+        "n": 1064,
+        "positives": 261,
+        "negatives": 803,
+        "positive_rate": 0.24530075187969924
+      },
+      "secondary_label_gt50": {
+        "n": 1064,
+        "positives": 105,
+        "negatives": 959,
+        "positive_rate": 0.09868421052631579
+      }
+    }
+  },
+  "rows": {
+    "train": {
+      "n_rows": 1521,
+      "first_target_date": "2016-01-01",
+      "last_target_date": "2020-12-31",
+      "dropped_incomplete_feature_rows": 290
+    },
+    "validation": {
+      "n_rows": 706,
+      "first_target_date": "2021-01-01",
+      "last_target_date": "2022-12-31",
+      "dropped_incomplete_feature_rows": 18
+    },
+    "test": {
+      "n_rows": 1064,
+      "first_target_date": "2023-01-01",
+      "last_target_date": "2025-12-31",
+      "dropped_incomplete_feature_rows": 22
+    }
+  },
+  "data_summary": {
+    "first_day": "2013-01-01",
+    "last_day": "2025-12-31",
+    "n_days": 4748,
+    "pm10_valid_days": 4672,
+    "pm25_valid_days": 4304,
+    "weather_days": 4748,
+    "rows_with_label_and_split": 3621,
+    "feature_transforms": "PM10 and PM2.5 enter as natural logs of the daily mean (ug/m3); precipitation as log(1 + mm); temperature range is daily max minus min."
+  },
+  "label_thresholds_ugm3_by_year_month": {
+    "2016": {
+      "01": 117.532,
+      "02": 79.04,
+      "03": 48.35,
+      "04": 41.07,
+      "05": 38.26,
+      "06": 32.578,
+      "07": 41.41,
+      "08": 48.16,
+      "09": 45.15,
+      "10": 75.065,
+      "11": 78.0,
+      "12": 105.95
+    },
+    "2017": {
+      "01": 108.045,
+      "02": 73.39,
+      "03": 40.68,
+      "04": 37.64,
+      "05": 29.74,
+      "06": 30.023,
+      "07": 35.938,
+      "08": 36.47,
+      "09": 42.773,
+      "10": 49.6,
+      "11": 88.913,
+      "12": 87.36
+    },
+    "2018": {
+      "01": 113.82,
+      "02": 76.56,
+      "03": 44.47,
+      "04": 32.843,
+      "05": 28.5,
+      "06": 29.525,
+      "07": 30.557,
+      "08": 33.72,
+      "09": 42.483,
+      "10": 45.81,
+      "11": 81.31,
+      "12": 87.11
+    },
+    "2019": {
+      "01": 113.7,
+      "02": 76.7,
+      "03": 46.7,
+      "04": 39.35,
+      "05": 28.087,
+      "06": 31.495,
+      "07": 26.37,
+      "08": 32.66,
+      "09": 38.407,
+      "10": 49.12,
+      "11": 79.775,
+      "12": 83.42
+    },
+    "2020": {
+      "01": 93.39,
+      "02": 83.955,
+      "03": 46.7,
+      "04": 36.36,
+      "05": 26.168,
+      "06": 29.515,
+      "07": 25.82,
+      "08": 32.03,
+      "09": 35.83,
+      "10": 53.29,
+      "11": 60.895,
+      "12": 81.57
+    },
+    "2021": {
+      "01": 70.7,
+      "02": 60.11,
+      "03": 42.96,
+      "04": 35.258,
+      "05": 26.407,
+      "06": 27.41,
+      "07": 24.01,
+      "08": 29.06,
+      "09": 35.055,
+      "10": 53.29,
+      "11": 62.255,
+      "12": 69.25
+    },
+    "2022": {
+      "01": 60.12,
+      "02": 61.15,
+      "03": 40.04,
+      "04": 30.172,
+      "05": 24.2,
+      "06": 25.9,
+      "07": 26.0,
+      "08": 29.55,
+      "09": 32.695,
+      "10": 41.51,
+      "11": 56.73,
+      "12": 63.76
+    },
+    "2023": {
+      "01": 56.8,
+      "02": 49.9,
+      "03": 40.82,
+      "04": 27.738,
+      "05": 24.99,
+      "06": 23.84,
+      "07": 26.81,
+      "08": 28.93,
+      "09": 30.402,
+      "10": 35.64,
+      "11": 55.42,
+      "12": 60.69
+    },
+    "2024": {
+      "01": 45.05,
+      "02": 49.047,
+      "03": 36.86,
+      "04": 26.825,
+      "05": 24.075,
+      "06": 23.832,
+      "07": 28.08,
+      "08": 30.032,
+      "09": 30.607,
+      "10": 38.98,
+      "11": 48.44,
+      "12": 58.59
+    },
+    "2025": {
+      "01": 43.61,
+      "02": 44.76,
+      "03": 36.33,
+      "04": 27.83,
+      "05": 23.89,
+      "06": 27.735,
+      "07": 28.54,
+      "08": 27.745,
+      "09": 30.718,
+      "10": 41.05,
+      "11": 44.445,
+      "12": 52.86
+    }
+  },
+  "model": {
+    "variant": "with_next_day_weather",
+    "features": [
+      "log_pm10_t",
+      "log_pm10_t_minus_1",
+      "log_pm10_mean3",
+      "log_pm10_mean7",
+      "log_pm25_t",
+      "month_sin",
+      "month_cos",
+      "is_weekend",
+      "heating_season",
+      "temp_mean_c_t",
+      "temp_range_c_t",
+      "log1p_precip_mm_t",
+      "wind_max_ms_t",
+      "radiation_mj_m2_t",
+      "rh_mean_pct_t",
+      "pressure_mean_hpa_t",
+      "temp_mean_c_t1",
+      "temp_range_c_t1",
+      "log1p_precip_mm_t1",
+      "wind_max_ms_t1",
+      "radiation_mj_m2_t1",
+      "rh_mean_pct_t1",
+      "pressure_mean_hpa_t1"
+    ],
+    "chosen_C": 0.1,
+    "C_grid_validation": [
+      {
+        "C": 0.001,
+        "validation_roc_auc": 0.8616073026669053
+      },
+      {
+        "C": 0.01,
+        "validation_roc_auc": 0.8930374082691963
+      },
+      {
+        "C": 0.1,
+        "validation_roc_auc": 0.9059721973629258
+      },
+      {
+        "C": 1.0,
+        "validation_roc_auc": 0.90179583557067
+      },
+      {
+        "C": 10.0,
+        "validation_roc_auc": 0.8999224389952867
+      },
+      {
+        "C": 100.0,
+        "validation_roc_auc": 0.8997434520613329
+      }
+    ],
+    "threshold": 0.53,
+    "threshold_rule": "maximise F1 on the validation rows over thresholds 0.01..0.99",
+    "validation": {
+      "n": 706,
+      "positive_rate": 0.21388101983002833,
+      "roc_auc": 0.9059721973629258,
+      "pr_auc": 0.7739166470449339,
+      "brier": 0.1013528864927235,
+      "threshold": 0.53,
+      "precision": 0.7412587412587412,
+      "recall": 0.7019867549668874,
+      "f1": 0.7210884353741497,
+      "tn": 518,
+      "fp": 37,
+      "fn": 45,
+      "tp": 106,
+      "calibration_bins": [
+        {
+          "bin": 0,
+          "lower": 0.0,
+          "upper": 0.1,
+          "count": 255,
+          "predicted_mean": 0.029760576980465008,
+          "observed_rate": 0.00784313725490196
+        },
+        {
+          "bin": 1,
+          "lower": 0.1,
+          "upper": 0.2,
+          "count": 82,
+          "predicted_mean": 0.1457298747049374,
+          "observed_rate": 0.10975609756097561
+        },
+        {
+          "bin": 2,
+          "lower": 0.2,
+          "upper": 0.30000000000000004,
+          "count": 90,
+          "predicted_mean": 0.24671240100153347,
+          "observed_rate": 0.1111111111111111
+        },
+        {
+          "bin": 3,
+          "lower": 0.30000000000000004,
+          "upper": 0.4,
+          "count": 71,
+          "predicted_mean": 0.3513906096075359,
+          "observed_rate": 0.11267605633802817
+        },
+        {
+          "bin": 4,
+          "lower": 0.4,
+          "upper": 0.5,
+          "count": 54,
+          "predicted_mean": 0.4488789909135846,
+          "observed_rate": 0.25925925925925924
+        },
+        {
+          "bin": 5,
+          "lower": 0.5,
+          "upper": 0.6000000000000001,
+          "count": 37,
+          "predicted_mean": 0.5501420133396615,
+          "observed_rate": 0.3783783783783784
+        },
+        {
+          "bin": 6,
+          "lower": 0.6000000000000001,
+          "upper": 0.7000000000000001,
+          "count": 41,
+          "predicted_mean": 0.6496038558050533,
+          "observed_rate": 0.6341463414634146
+        },
+        {
+          "bin": 7,
+          "lower": 0.7000000000000001,
+          "upper": 0.8,
+          "count": 35,
+          "predicted_mean": 0.7461717668021338,
+          "observed_rate": 0.9142857142857143
+        },
+        {
+          "bin": 8,
+          "lower": 0.8,
+          "upper": 0.9,
+          "count": 24,
+          "predicted_mean": 0.847202827462079,
+          "observed_rate": 0.7916666666666666
+        },
+        {
+          "bin": 9,
+          "lower": 0.9,
+          "upper": 1.0,
+          "count": 17,
+          "predicted_mean": 0.936787683130603,
+          "observed_rate": 1.0
+        }
+      ]
+    },
+    "test": {
+      "n": 1064,
+      "positive_rate": 0.24530075187969924,
+      "roc_auc": 0.8771178960125583,
+      "pr_auc": 0.7230679890749725,
+      "brier": 0.11682216617828223,
+      "threshold": 0.53,
+      "precision": 0.6588785046728972,
+      "recall": 0.5402298850574713,
+      "f1": 0.5936842105263158,
+      "tn": 730,
+      "fp": 73,
+      "fn": 120,
+      "tp": 141,
+      "calibration_bins": [
+        {
+          "bin": 0,
+          "lower": 0.0,
+          "upper": 0.1,
+          "count": 390,
+          "predicted_mean": 0.031320247310150436,
+          "observed_rate": 0.023076923076923078
+        },
+        {
+          "bin": 1,
+          "lower": 0.1,
+          "upper": 0.2,
+          "count": 163,
+          "predicted_mean": 0.14377488697395338,
+          "observed_rate": 0.12269938650306748
+        },
+        {
+          "bin": 2,
+          "lower": 0.2,
+          "upper": 0.30000000000000004,
+          "count": 115,
+          "predicted_mean": 0.2476700642412887,
+          "observed_rate": 0.0782608695652174
+        },
+        {
+          "bin": 3,
+          "lower": 0.30000000000000004,
+          "upper": 0.4,
+          "count": 98,
+          "predicted_mean": 0.34893109021793745,
+          "observed_rate": 0.3877551020408163
+        },
+        {
+          "bin": 4,
+          "lower": 0.4,
+          "upper": 0.5,
+          "count": 68,
+          "predicted_mean": 0.4478688554698764,
+          "observed_rate": 0.5
+        },
+        {
+          "bin": 5,
+          "lower": 0.5,
+          "upper": 0.6000000000000001,
+          "count": 58,
+          "predicted_mean": 0.5481632621618998,
+          "observed_rate": 0.39655172413793105
+        },
+        {
+          "bin": 6,
+          "lower": 0.6000000000000001,
+          "upper": 0.7000000000000001,
+          "count": 51,
+          "predicted_mean": 0.6481059235010189,
+          "observed_rate": 0.5882352941176471
+        },
+        {
+          "bin": 7,
+          "lower": 0.7000000000000001,
+          "upper": 0.8,
+          "count": 57,
+          "predicted_mean": 0.7404746465486894,
+          "observed_rate": 0.7192982456140351
+        },
+        {
+          "bin": 8,
+          "lower": 0.8,
+          "upper": 0.9,
+          "count": 39,
+          "predicted_mean": 0.844356749786317,
+          "observed_rate": 0.8205128205128205
+        },
+        {
+          "bin": 9,
+          "lower": 0.9,
+          "upper": 1.0,
+          "count": 25,
+          "predicted_mean": 0.9393858268782245,
+          "observed_rate": 1.0
+        }
+      ],
+      "roc_auc_bootstrap": {
+        "method": "moving-block bootstrap, block 14 days, 1000 replicates",
+        "seed": 20261007,
+        "valid_replicates": 1000,
+        "ci95_low": 0.8409352549710614,
+        "ci95_high": 0.9050628163471466
+      }
+    },
+    "standardised_coefficient_ranking": [
+      {
+        "rank": 1,
+        "feature": "log_pm10_t",
+        "coefficient": 1.4528104795707624,
+        "abs_coefficient": 1.4528104795707624,
+        "effect": "raises risk"
+      },
+      {
+        "rank": 2,
+        "feature": "month_cos",
+        "coefficient": -1.321468878105589,
+        "abs_coefficient": 1.321468878105589,
+        "effect": "lowers risk"
+      },
+      {
+        "rank": 3,
+        "feature": "wind_max_ms_t1",
+        "coefficient": -0.6141948698020527,
+        "abs_coefficient": 0.6141948698020527,
+        "effect": "lowers risk"
+      },
+      {
+        "rank": 4,
+        "feature": "log_pm10_mean7",
+        "coefficient": 0.3854369052635032,
+        "abs_coefficient": 0.3854369052635032,
+        "effect": "raises risk"
+      },
+      {
+        "rank": 5,
+        "feature": "pressure_mean_hpa_t",
+        "coefficient": 0.3695391027942179,
+        "abs_coefficient": 0.3695391027942179,
+        "effect": "raises risk"
+      },
+      {
+        "rank": 6,
+        "feature": "temp_range_c_t",
+        "coefficient": 0.3459077936107304,
+        "abs_coefficient": 0.3459077936107304,
+        "effect": "raises risk"
+      },
+      {
+        "rank": 7,
+        "feature": "log_pm10_t_minus_1",
+        "coefficient": -0.32236397126822297,
+        "abs_coefficient": 0.32236397126822297,
+        "effect": "lowers risk"
+      },
+      {
+        "rank": 8,
+        "feature": "temp_mean_c_t1",
+        "coefficient": 0.3214027608116131,
+        "abs_coefficient": 0.3214027608116131,
+        "effect": "raises risk"
+      },
+      {
+        "rank": 9,
+        "feature": "log_pm10_mean3",
+        "coefficient": 0.2829278527703857,
+        "abs_coefficient": 0.2829278527703857,
+        "effect": "raises risk"
+      },
+      {
+        "rank": 10,
+        "feature": "temp_range_c_t1",
+        "coefficient": 0.2811411759864138,
+        "abs_coefficient": 0.2811411759864138,
+        "effect": "raises risk"
+      },
+      {
+        "rank": 11,
+        "feature": "log_pm25_t",
+        "coefficient": 0.24179693510564756,
+        "abs_coefficient": 0.24179693510564756,
+        "effect": "raises risk"
+      },
+      {
+        "rank": 12,
+        "feature": "rh_mean_pct_t1",
+        "coefficient": 0.2270189283094124,
+        "abs_coefficient": 0.2270189283094124,
+        "effect": "raises risk"
+      },
+      {
+        "rank": 13,
+        "feature": "log1p_precip_mm_t1",
+        "coefficient": -0.21304312008919357,
+        "abs_coefficient": 0.21304312008919357,
+        "effect": "lowers risk"
+      },
+      {
+        "rank": 14,
+        "feature": "radiation_mj_m2_t1",
+        "coefficient": -0.18578233173403003,
+        "abs_coefficient": 0.18578233173403003,
+        "effect": "lowers risk"
+      },
+      {
+        "rank": 15,
+        "feature": "rh_mean_pct_t",
+        "coefficient": -0.17163811970784235,
+        "abs_coefficient": 0.17163811970784235,
+        "effect": "lowers risk"
+      },
+      {
+        "rank": 16,
+        "feature": "is_weekend",
+        "coefficient": -0.13683013105699174,
+        "abs_coefficient": 0.13683013105699174,
+        "effect": "lowers risk"
+      },
+      {
+        "rank": 17,
+        "feature": "heating_season",
+        "coefficient": 0.12376805120565736,
+        "abs_coefficient": 0.12376805120565736,
+        "effect": "raises risk"
+      },
+      {
+        "rank": 18,
+        "feature": "month_sin",
+        "coefficient": 0.10251788027322409,
+        "abs_coefficient": 0.10251788027322409,
+        "effect": "raises risk"
+      },
+      {
+        "rank": 19,
+        "feature": "radiation_mj_m2_t",
+        "coefficient": 0.09509074128814576,
+        "abs_coefficient": 0.09509074128814576,
+        "effect": "raises risk"
+      },
+      {
+        "rank": 20,
+        "feature": "pressure_mean_hpa_t1",
+        "coefficient": -0.08975079176863004,
+        "abs_coefficient": 0.08975079176863004,
+        "effect": "lowers risk"
+      },
+      {
+        "rank": 21,
+        "feature": "log1p_precip_mm_t",
+        "coefficient": -0.08197688748353267,
+        "abs_coefficient": 0.08197688748353267,
+        "effect": "lowers risk"
+      },
+      {
+        "rank": 22,
+        "feature": "temp_mean_c_t",
+        "coefficient": -0.03946529095651449,
+        "abs_coefficient": 0.03946529095651449,
+        "effect": "lowers risk"
+      },
+      {
+        "rank": 23,
+        "feature": "wind_max_ms_t",
+        "coefficient": 0.010426013912446415,
+        "abs_coefficient": 0.010426013912446415,
+        "effect": "raises risk"
+      }
+    ],
+    "intercept": -1.0742072186671223
+  },
+  "ablation": {
+    "with_next_day_weather": {
+      "variant": "with_next_day_weather",
+      "features": [
+        "log_pm10_t",
+        "log_pm10_t_minus_1",
+        "log_pm10_mean3",
+        "log_pm10_mean7",
+        "log_pm25_t",
+        "month_sin",
+        "month_cos",
+        "is_weekend",
+        "heating_season",
+        "temp_mean_c_t",
+        "temp_range_c_t",
+        "log1p_precip_mm_t",
+        "wind_max_ms_t",
+        "radiation_mj_m2_t",
+        "rh_mean_pct_t",
+        "pressure_mean_hpa_t",
+        "temp_mean_c_t1",
+        "temp_range_c_t1",
+        "log1p_precip_mm_t1",
+        "wind_max_ms_t1",
+        "radiation_mj_m2_t1",
+        "rh_mean_pct_t1",
+        "pressure_mean_hpa_t1"
+      ],
+      "chosen_C": 0.1,
+      "C_grid_validation": [
+        {
+          "C": 0.001,
+          "validation_roc_auc": 0.8616073026669053
+        },
+        {
+          "C": 0.01,
+          "validation_roc_auc": 0.8930374082691963
+        },
+        {
+          "C": 0.1,
+          "validation_roc_auc": 0.9059721973629258
+        },
+        {
+          "C": 1.0,
+          "validation_roc_auc": 0.90179583557067
+        },
+        {
+          "C": 10.0,
+          "validation_roc_auc": 0.8999224389952867
+        },
+        {
+          "C": 100.0,
+          "validation_roc_auc": 0.8997434520613329
+        }
+      ],
+      "threshold": 0.53,
+      "threshold_rule": "maximise F1 on the validation rows over thresholds 0.01..0.99",
+      "validation": {
+        "n": 706,
+        "positive_rate": 0.21388101983002833,
+        "roc_auc": 0.9059721973629258,
+        "pr_auc": 0.7739166470449339,
+        "brier": 0.1013528864927235,
+        "threshold": 0.53,
+        "precision": 0.7412587412587412,
+        "recall": 0.7019867549668874,
+        "f1": 0.7210884353741497,
+        "tn": 518,
+        "fp": 37,
+        "fn": 45,
+        "tp": 106,
+        "calibration_bins": [
+          {
+            "bin": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "count": 255,
+            "predicted_mean": 0.029760576980465008,
+            "observed_rate": 0.00784313725490196
+          },
+          {
+            "bin": 1,
+            "lower": 0.1,
+            "upper": 0.2,
+            "count": 82,
+            "predicted_mean": 0.1457298747049374,
+            "observed_rate": 0.10975609756097561
+          },
+          {
+            "bin": 2,
+            "lower": 0.2,
+            "upper": 0.30000000000000004,
+            "count": 90,
+            "predicted_mean": 0.24671240100153347,
+            "observed_rate": 0.1111111111111111
+          },
+          {
+            "bin": 3,
+            "lower": 0.30000000000000004,
+            "upper": 0.4,
+            "count": 71,
+            "predicted_mean": 0.3513906096075359,
+            "observed_rate": 0.11267605633802817
+          },
+          {
+            "bin": 4,
+            "lower": 0.4,
+            "upper": 0.5,
+            "count": 54,
+            "predicted_mean": 0.4488789909135846,
+            "observed_rate": 0.25925925925925924
+          },
+          {
+            "bin": 5,
+            "lower": 0.5,
+            "upper": 0.6000000000000001,
+            "count": 37,
+            "predicted_mean": 0.5501420133396615,
+            "observed_rate": 0.3783783783783784
+          },
+          {
+            "bin": 6,
+            "lower": 0.6000000000000001,
+            "upper": 0.7000000000000001,
+            "count": 41,
+            "predicted_mean": 0.6496038558050533,
+            "observed_rate": 0.6341463414634146
+          },
+          {
+            "bin": 7,
+            "lower": 0.7000000000000001,
+            "upper": 0.8,
+            "count": 35,
+            "predicted_mean": 0.7461717668021338,
+            "observed_rate": 0.9142857142857143
+          },
+          {
+            "bin": 8,
+            "lower": 0.8,
+            "upper": 0.9,
+            "count": 24,
+            "predicted_mean": 0.847202827462079,
+            "observed_rate": 0.7916666666666666
+          },
+          {
+            "bin": 9,
+            "lower": 0.9,
+            "upper": 1.0,
+            "count": 17,
+            "predicted_mean": 0.936787683130603,
+            "observed_rate": 1.0
+          }
+        ]
+      },
+      "test": {
+        "n": 1064,
+        "positive_rate": 0.24530075187969924,
+        "roc_auc": 0.8771178960125583,
+        "pr_auc": 0.7230679890749725,
+        "brier": 0.11682216617828223,
+        "threshold": 0.53,
+        "precision": 0.6588785046728972,
+        "recall": 0.5402298850574713,
+        "f1": 0.5936842105263158,
+        "tn": 730,
+        "fp": 73,
+        "fn": 120,
+        "tp": 141,
+        "calibration_bins": [
+          {
+            "bin": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "count": 390,
+            "predicted_mean": 0.031320247310150436,
+            "observed_rate": 0.023076923076923078
+          },
+          {
+            "bin": 1,
+            "lower": 0.1,
+            "upper": 0.2,
+            "count": 163,
+            "predicted_mean": 0.14377488697395338,
+            "observed_rate": 0.12269938650306748
+          },
+          {
+            "bin": 2,
+            "lower": 0.2,
+            "upper": 0.30000000000000004,
+            "count": 115,
+            "predicted_mean": 0.2476700642412887,
+            "observed_rate": 0.0782608695652174
+          },
+          {
+            "bin": 3,
+            "lower": 0.30000000000000004,
+            "upper": 0.4,
+            "count": 98,
+            "predicted_mean": 0.34893109021793745,
+            "observed_rate": 0.3877551020408163
+          },
+          {
+            "bin": 4,
+            "lower": 0.4,
+            "upper": 0.5,
+            "count": 68,
+            "predicted_mean": 0.4478688554698764,
+            "observed_rate": 0.5
+          },
+          {
+            "bin": 5,
+            "lower": 0.5,
+            "upper": 0.6000000000000001,
+            "count": 58,
+            "predicted_mean": 0.5481632621618998,
+            "observed_rate": 0.39655172413793105
+          },
+          {
+            "bin": 6,
+            "lower": 0.6000000000000001,
+            "upper": 0.7000000000000001,
+            "count": 51,
+            "predicted_mean": 0.6481059235010189,
+            "observed_rate": 0.5882352941176471
+          },
+          {
+            "bin": 7,
+            "lower": 0.7000000000000001,
+            "upper": 0.8,
+            "count": 57,
+            "predicted_mean": 0.7404746465486894,
+            "observed_rate": 0.7192982456140351
+          },
+          {
+            "bin": 8,
+            "lower": 0.8,
+            "upper": 0.9,
+            "count": 39,
+            "predicted_mean": 0.844356749786317,
+            "observed_rate": 0.8205128205128205
+          },
+          {
+            "bin": 9,
+            "lower": 0.9,
+            "upper": 1.0,
+            "count": 25,
+            "predicted_mean": 0.9393858268782245,
+            "observed_rate": 1.0
+          }
+        ],
+        "roc_auc_bootstrap": {
+          "method": "moving-block bootstrap, block 14 days, 1000 replicates",
+          "seed": 20261007,
+          "valid_replicates": 1000,
+          "ci95_low": 0.8409352549710614,
+          "ci95_high": 0.9050628163471466
+        }
+      },
+      "standardised_coefficient_ranking": [
+        {
+          "rank": 1,
+          "feature": "log_pm10_t",
+          "coefficient": 1.4528104795707624,
+          "abs_coefficient": 1.4528104795707624,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 2,
+          "feature": "month_cos",
+          "coefficient": -1.321468878105589,
+          "abs_coefficient": 1.321468878105589,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 3,
+          "feature": "wind_max_ms_t1",
+          "coefficient": -0.6141948698020527,
+          "abs_coefficient": 0.6141948698020527,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 4,
+          "feature": "log_pm10_mean7",
+          "coefficient": 0.3854369052635032,
+          "abs_coefficient": 0.3854369052635032,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 5,
+          "feature": "pressure_mean_hpa_t",
+          "coefficient": 0.3695391027942179,
+          "abs_coefficient": 0.3695391027942179,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 6,
+          "feature": "temp_range_c_t",
+          "coefficient": 0.3459077936107304,
+          "abs_coefficient": 0.3459077936107304,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 7,
+          "feature": "log_pm10_t_minus_1",
+          "coefficient": -0.32236397126822297,
+          "abs_coefficient": 0.32236397126822297,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 8,
+          "feature": "temp_mean_c_t1",
+          "coefficient": 0.3214027608116131,
+          "abs_coefficient": 0.3214027608116131,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 9,
+          "feature": "log_pm10_mean3",
+          "coefficient": 0.2829278527703857,
+          "abs_coefficient": 0.2829278527703857,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 10,
+          "feature": "temp_range_c_t1",
+          "coefficient": 0.2811411759864138,
+          "abs_coefficient": 0.2811411759864138,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 11,
+          "feature": "log_pm25_t",
+          "coefficient": 0.24179693510564756,
+          "abs_coefficient": 0.24179693510564756,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 12,
+          "feature": "rh_mean_pct_t1",
+          "coefficient": 0.2270189283094124,
+          "abs_coefficient": 0.2270189283094124,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 13,
+          "feature": "log1p_precip_mm_t1",
+          "coefficient": -0.21304312008919357,
+          "abs_coefficient": 0.21304312008919357,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 14,
+          "feature": "radiation_mj_m2_t1",
+          "coefficient": -0.18578233173403003,
+          "abs_coefficient": 0.18578233173403003,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 15,
+          "feature": "rh_mean_pct_t",
+          "coefficient": -0.17163811970784235,
+          "abs_coefficient": 0.17163811970784235,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 16,
+          "feature": "is_weekend",
+          "coefficient": -0.13683013105699174,
+          "abs_coefficient": 0.13683013105699174,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 17,
+          "feature": "heating_season",
+          "coefficient": 0.12376805120565736,
+          "abs_coefficient": 0.12376805120565736,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 18,
+          "feature": "month_sin",
+          "coefficient": 0.10251788027322409,
+          "abs_coefficient": 0.10251788027322409,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 19,
+          "feature": "radiation_mj_m2_t",
+          "coefficient": 0.09509074128814576,
+          "abs_coefficient": 0.09509074128814576,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 20,
+          "feature": "pressure_mean_hpa_t1",
+          "coefficient": -0.08975079176863004,
+          "abs_coefficient": 0.08975079176863004,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 21,
+          "feature": "log1p_precip_mm_t",
+          "coefficient": -0.08197688748353267,
+          "abs_coefficient": 0.08197688748353267,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 22,
+          "feature": "temp_mean_c_t",
+          "coefficient": -0.03946529095651449,
+          "abs_coefficient": 0.03946529095651449,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 23,
+          "feature": "wind_max_ms_t",
+          "coefficient": 0.010426013912446415,
+          "abs_coefficient": 0.010426013912446415,
+          "effect": "raises risk"
+        }
+      ],
+      "intercept": -1.0742072186671223
+    },
+    "no_next_day_weather": {
+      "variant": "no_next_day_weather",
+      "features": [
+        "log_pm10_t",
+        "log_pm10_t_minus_1",
+        "log_pm10_mean3",
+        "log_pm10_mean7",
+        "log_pm25_t",
+        "month_sin",
+        "month_cos",
+        "is_weekend",
+        "heating_season",
+        "temp_mean_c_t",
+        "temp_range_c_t",
+        "log1p_precip_mm_t",
+        "wind_max_ms_t",
+        "radiation_mj_m2_t",
+        "rh_mean_pct_t",
+        "pressure_mean_hpa_t"
+      ],
+      "chosen_C": 0.1,
+      "C_grid_validation": [
+        {
+          "C": 0.001,
+          "validation_roc_auc": 0.8414891712904957
+        },
+        {
+          "C": 0.01,
+          "validation_roc_auc": 0.8718453552890638
+        },
+        {
+          "C": 0.1,
+          "validation_roc_auc": 0.87665413758129
+        },
+        {
+          "C": 1.0,
+          "validation_roc_auc": 0.8695543225344549
+        },
+        {
+          "C": 10.0,
+          "validation_roc_auc": 0.8677644531949168
+        },
+        {
+          "C": 100.0,
+          "validation_roc_auc": 0.8675496688741723
+        }
+      ],
+      "threshold": 0.54,
+      "threshold_rule": "maximise F1 on the validation rows over thresholds 0.01..0.99",
+      "validation": {
+        "n": 706,
+        "positive_rate": 0.21388101983002833,
+        "roc_auc": 0.87665413758129,
+        "pr_auc": 0.6721091461344187,
+        "brier": 0.11964216976408983,
+        "threshold": 0.54,
+        "precision": 0.673469387755102,
+        "recall": 0.6556291390728477,
+        "f1": 0.6644295302013422,
+        "tn": 507,
+        "fp": 48,
+        "fn": 52,
+        "tp": 99,
+        "calibration_bins": [
+          {
+            "bin": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "count": 224,
+            "predicted_mean": 0.03363914399164846,
+            "observed_rate": 0.008928571428571428
+          },
+          {
+            "bin": 1,
+            "lower": 0.1,
+            "upper": 0.2,
+            "count": 88,
+            "predicted_mean": 0.14715494785423866,
+            "observed_rate": 0.056818181818181816
+          },
+          {
+            "bin": 2,
+            "lower": 0.2,
+            "upper": 0.30000000000000004,
+            "count": 89,
+            "predicted_mean": 0.2496396204586214,
+            "observed_rate": 0.1348314606741573
+          },
+          {
+            "bin": 3,
+            "lower": 0.30000000000000004,
+            "upper": 0.4,
+            "count": 79,
+            "predicted_mean": 0.3497019588290056,
+            "observed_rate": 0.24050632911392406
+          },
+          {
+            "bin": 4,
+            "lower": 0.4,
+            "upper": 0.5,
+            "count": 53,
+            "predicted_mean": 0.4467433893332107,
+            "observed_rate": 0.18867924528301888
+          },
+          {
+            "bin": 5,
+            "lower": 0.5,
+            "upper": 0.6000000000000001,
+            "count": 60,
+            "predicted_mean": 0.5479352551171963,
+            "observed_rate": 0.43333333333333335
+          },
+          {
+            "bin": 6,
+            "lower": 0.6000000000000001,
+            "upper": 0.7000000000000001,
+            "count": 35,
+            "predicted_mean": 0.6413549219959601,
+            "observed_rate": 0.5714285714285714
+          },
+          {
+            "bin": 7,
+            "lower": 0.7000000000000001,
+            "upper": 0.8,
+            "count": 34,
+            "predicted_mean": 0.7452231592578471,
+            "observed_rate": 0.6764705882352942
+          },
+          {
+            "bin": 8,
+            "lower": 0.8,
+            "upper": 0.9,
+            "count": 29,
+            "predicted_mean": 0.8382816010102118,
+            "observed_rate": 0.6896551724137931
+          },
+          {
+            "bin": 9,
+            "lower": 0.9,
+            "upper": 1.0,
+            "count": 15,
+            "predicted_mean": 0.9308212674087104,
+            "observed_rate": 0.9333333333333333
+          }
+        ]
+      },
+      "test": {
+        "n": 1064,
+        "positive_rate": 0.24530075187969924,
+        "roc_auc": 0.8472156615756049,
+        "pr_auc": 0.6874570535092251,
+        "brier": 0.1273138517322546,
+        "threshold": 0.54,
+        "precision": 0.67,
+        "recall": 0.5134099616858238,
+        "f1": 0.5813449023861171,
+        "tn": 737,
+        "fp": 66,
+        "fn": 127,
+        "tp": 134,
+        "calibration_bins": [
+          {
+            "bin": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "count": 349,
+            "predicted_mean": 0.03588801236803485,
+            "observed_rate": 0.03724928366762178
+          },
+          {
+            "bin": 1,
+            "lower": 0.1,
+            "upper": 0.2,
+            "count": 163,
+            "predicted_mean": 0.15209174536980782,
+            "observed_rate": 0.12883435582822086
+          },
+          {
+            "bin": 2,
+            "lower": 0.2,
+            "upper": 0.30000000000000004,
+            "count": 153,
+            "predicted_mean": 0.24676448043561428,
+            "observed_rate": 0.13071895424836602
+          },
+          {
+            "bin": 3,
+            "lower": 0.30000000000000004,
+            "upper": 0.4,
+            "count": 106,
+            "predicted_mean": 0.34695242160229217,
+            "observed_rate": 0.32075471698113206
+          },
+          {
+            "bin": 4,
+            "lower": 0.4,
+            "upper": 0.5,
+            "count": 60,
+            "predicted_mean": 0.4518779265522552,
+            "observed_rate": 0.36666666666666664
+          },
+          {
+            "bin": 5,
+            "lower": 0.5,
+            "upper": 0.6000000000000001,
+            "count": 74,
+            "predicted_mean": 0.5482282797876555,
+            "observed_rate": 0.4864864864864865
+          },
+          {
+            "bin": 6,
+            "lower": 0.6000000000000001,
+            "upper": 0.7000000000000001,
+            "count": 60,
+            "predicted_mean": 0.6489358978477845,
+            "observed_rate": 0.55
+          },
+          {
+            "bin": 7,
+            "lower": 0.7000000000000001,
+            "upper": 0.8,
+            "count": 53,
+            "predicted_mean": 0.7548017339510228,
+            "observed_rate": 0.7169811320754716
+          },
+          {
+            "bin": 8,
+            "lower": 0.8,
+            "upper": 0.9,
+            "count": 31,
+            "predicted_mean": 0.8565826816570862,
+            "observed_rate": 0.9354838709677419
+          },
+          {
+            "bin": 9,
+            "lower": 0.9,
+            "upper": 1.0,
+            "count": 15,
+            "predicted_mean": 0.9410484041401113,
+            "observed_rate": 1.0
+          }
+        ],
+        "roc_auc_bootstrap": {
+          "method": "moving-block bootstrap, block 14 days, 1000 replicates",
+          "seed": 20261007,
+          "valid_replicates": 1000,
+          "ci95_low": 0.8091145681591144,
+          "ci95_high": 0.8792248985886882
+        }
+      },
+      "standardised_coefficient_ranking": [
+        {
+          "rank": 1,
+          "feature": "log_pm10_t",
+          "coefficient": 1.4107696721930008,
+          "abs_coefficient": 1.4107696721930008,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 2,
+          "feature": "month_cos",
+          "coefficient": -1.2264564665722695,
+          "abs_coefficient": 1.2264564665722695,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 3,
+          "feature": "log_pm10_mean7",
+          "coefficient": 0.43374291066048887,
+          "abs_coefficient": 0.43374291066048887,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 4,
+          "feature": "pressure_mean_hpa_t",
+          "coefficient": 0.4116742229432272,
+          "abs_coefficient": 0.4116742229432272,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 5,
+          "feature": "temp_range_c_t",
+          "coefficient": 0.3833643689551707,
+          "abs_coefficient": 0.3833643689551707,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 6,
+          "feature": "log_pm10_t_minus_1",
+          "coefficient": -0.3569691678405824,
+          "abs_coefficient": 0.3569691678405824,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 7,
+          "feature": "heating_season",
+          "coefficient": 0.2373719849110491,
+          "abs_coefficient": 0.2373719849110491,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 8,
+          "feature": "log_pm10_mean3",
+          "coefficient": 0.22593026445550843,
+          "abs_coefficient": 0.22593026445550843,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 9,
+          "feature": "log_pm25_t",
+          "coefficient": 0.22526014044681442,
+          "abs_coefficient": 0.22526014044681442,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 10,
+          "feature": "radiation_mj_m2_t",
+          "coefficient": 0.21517308332763369,
+          "abs_coefficient": 0.21517308332763369,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 11,
+          "feature": "wind_max_ms_t",
+          "coefficient": -0.2073122922560218,
+          "abs_coefficient": 0.2073122922560218,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 12,
+          "feature": "is_weekend",
+          "coefficient": -0.15004693261783242,
+          "abs_coefficient": 0.15004693261783242,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 13,
+          "feature": "log1p_precip_mm_t",
+          "coefficient": -0.14337394783478924,
+          "abs_coefficient": 0.14337394783478924,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 14,
+          "feature": "rh_mean_pct_t",
+          "coefficient": -0.05783919189122102,
+          "abs_coefficient": 0.05783919189122102,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 15,
+          "feature": "temp_mean_c_t",
+          "coefficient": 0.03532946631280363,
+          "abs_coefficient": 0.03532946631280363,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 16,
+          "feature": "month_sin",
+          "coefficient": 0.028110062809005805,
+          "abs_coefficient": 0.028110062809005805,
+          "effect": "raises risk"
+        }
+      ],
+      "intercept": -0.8912137105001462
+    },
+    "no_weather": {
+      "variant": "no_weather",
+      "features": [
+        "log_pm10_t",
+        "log_pm10_t_minus_1",
+        "log_pm10_mean3",
+        "log_pm10_mean7",
+        "log_pm25_t",
+        "month_sin",
+        "month_cos",
+        "is_weekend",
+        "heating_season"
+      ],
+      "chosen_C": 0.1,
+      "C_grid_validation": [
+        {
+          "C": 0.001,
+          "validation_roc_auc": 0.7788198794821312
+        },
+        {
+          "C": 0.01,
+          "validation_roc_auc": 0.848899230356184
+        },
+        {
+          "C": 0.1,
+          "validation_roc_auc": 0.8641847145158403
+        },
+        {
+          "C": 1.0,
+          "validation_roc_auc": 0.8634329693932343
+        },
+        {
+          "C": 10.0,
+          "validation_roc_auc": 0.8630988604498537
+        },
+        {
+          "C": 100.0,
+          "validation_roc_auc": 0.8630988604498537
+        }
+      ],
+      "threshold": 0.46,
+      "threshold_rule": "maximise F1 on the validation rows over thresholds 0.01..0.99",
+      "validation": {
+        "n": 706,
+        "positive_rate": 0.21388101983002833,
+        "roc_auc": 0.8641847145158403,
+        "pr_auc": 0.6253723861576083,
+        "brier": 0.12427402426063733,
+        "threshold": 0.46,
+        "precision": 0.585635359116022,
+        "recall": 0.7019867549668874,
+        "f1": 0.6385542168674698,
+        "tn": 480,
+        "fp": 75,
+        "fn": 45,
+        "tp": 106,
+        "calibration_bins": [
+          {
+            "bin": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "count": 184,
+            "predicted_mean": 0.04002304253595941,
+            "observed_rate": 0.005434782608695652
+          },
+          {
+            "bin": 1,
+            "lower": 0.1,
+            "upper": 0.2,
+            "count": 94,
+            "predicted_mean": 0.14856097808189117,
+            "observed_rate": 0.06382978723404255
+          },
+          {
+            "bin": 2,
+            "lower": 0.2,
+            "upper": 0.30000000000000004,
+            "count": 120,
+            "predicted_mean": 0.2485266248520621,
+            "observed_rate": 0.125
+          },
+          {
+            "bin": 3,
+            "lower": 0.30000000000000004,
+            "upper": 0.4,
+            "count": 94,
+            "predicted_mean": 0.3503226036278778,
+            "observed_rate": 0.1702127659574468
+          },
+          {
+            "bin": 4,
+            "lower": 0.4,
+            "upper": 0.5,
+            "count": 61,
+            "predicted_mean": 0.4551432189365638,
+            "observed_rate": 0.3114754098360656
+          },
+          {
+            "bin": 5,
+            "lower": 0.5,
+            "upper": 0.6000000000000001,
+            "count": 45,
+            "predicted_mean": 0.5411968154751438,
+            "observed_rate": 0.4222222222222222
+          },
+          {
+            "bin": 6,
+            "lower": 0.6000000000000001,
+            "upper": 0.7000000000000001,
+            "count": 43,
+            "predicted_mean": 0.6475534240083165,
+            "observed_rate": 0.627906976744186
+          },
+          {
+            "bin": 7,
+            "lower": 0.7000000000000001,
+            "upper": 0.8,
+            "count": 34,
+            "predicted_mean": 0.7444032682656316,
+            "observed_rate": 0.7058823529411765
+          },
+          {
+            "bin": 8,
+            "lower": 0.8,
+            "upper": 0.9,
+            "count": 24,
+            "predicted_mean": 0.8457468491967836,
+            "observed_rate": 0.7916666666666666
+          },
+          {
+            "bin": 9,
+            "lower": 0.9,
+            "upper": 1.0,
+            "count": 7,
+            "predicted_mean": 0.9164430164201549,
+            "observed_rate": 0.7142857142857143
+          }
+        ]
+      },
+      "test": {
+        "n": 1064,
+        "positive_rate": 0.24530075187969924,
+        "roc_auc": 0.8302104655434839,
+        "pr_auc": 0.6483638168228025,
+        "brier": 0.13405302458093685,
+        "threshold": 0.46,
+        "precision": 0.6186046511627907,
+        "recall": 0.5095785440613027,
+        "f1": 0.5588235294117648,
+        "tn": 721,
+        "fp": 82,
+        "fn": 128,
+        "tp": 133,
+        "calibration_bins": [
+          {
+            "bin": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "count": 304,
+            "predicted_mean": 0.042849970080087486,
+            "observed_rate": 0.023026315789473683
+          },
+          {
+            "bin": 1,
+            "lower": 0.1,
+            "upper": 0.2,
+            "count": 195,
+            "predicted_mean": 0.15008528973093885,
+            "observed_rate": 0.15384615384615385
+          },
+          {
+            "bin": 2,
+            "lower": 0.2,
+            "upper": 0.30000000000000004,
+            "count": 145,
+            "predicted_mean": 0.2490119505407232,
+            "observed_rate": 0.15862068965517243
+          },
+          {
+            "bin": 3,
+            "lower": 0.30000000000000004,
+            "upper": 0.4,
+            "count": 136,
+            "predicted_mean": 0.35050602614468424,
+            "observed_rate": 0.33088235294117646
+          },
+          {
+            "bin": 4,
+            "lower": 0.4,
+            "upper": 0.5,
+            "count": 99,
+            "predicted_mean": 0.44593951595634673,
+            "observed_rate": 0.31313131313131315
+          },
+          {
+            "bin": 5,
+            "lower": 0.5,
+            "upper": 0.6000000000000001,
+            "count": 61,
+            "predicted_mean": 0.5445581434817767,
+            "observed_rate": 0.5573770491803278
+          },
+          {
+            "bin": 6,
+            "lower": 0.6000000000000001,
+            "upper": 0.7000000000000001,
+            "count": 44,
+            "predicted_mean": 0.6462227710021572,
+            "observed_rate": 0.6363636363636364
+          },
+          {
+            "bin": 7,
+            "lower": 0.7000000000000001,
+            "upper": 0.8,
+            "count": 47,
+            "predicted_mean": 0.7459452093668943,
+            "observed_rate": 0.6595744680851063
+          },
+          {
+            "bin": 8,
+            "lower": 0.8,
+            "upper": 0.9,
+            "count": 25,
+            "predicted_mean": 0.8474417700221827,
+            "observed_rate": 0.96
+          },
+          {
+            "bin": 9,
+            "lower": 0.9,
+            "upper": 1.0,
+            "count": 8,
+            "predicted_mean": 0.9613533128818611,
+            "observed_rate": 1.0
+          }
+        ],
+        "roc_auc_bootstrap": {
+          "method": "moving-block bootstrap, block 14 days, 1000 replicates",
+          "seed": 20261007,
+          "valid_replicates": 1000,
+          "ci95_low": 0.7936155919862169,
+          "ci95_high": 0.8613442192866697
+        }
+      },
+      "standardised_coefficient_ranking": [
+        {
+          "rank": 1,
+          "feature": "log_pm10_t",
+          "coefficient": 1.6442220447124796,
+          "abs_coefficient": 1.6442220447124796,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 2,
+          "feature": "month_cos",
+          "coefficient": -1.2570135885083569,
+          "abs_coefficient": 1.2570135885083569,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 3,
+          "feature": "log_pm10_t_minus_1",
+          "coefficient": -0.44311582865501575,
+          "abs_coefficient": 0.44311582865501575,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 4,
+          "feature": "log_pm25_t",
+          "coefficient": 0.40196500051049106,
+          "abs_coefficient": 0.40196500051049106,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 5,
+          "feature": "log_pm10_mean7",
+          "coefficient": 0.2756006638499194,
+          "abs_coefficient": 0.2756006638499194,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 6,
+          "feature": "is_weekend",
+          "coefficient": -0.12284254706571776,
+          "abs_coefficient": 0.12284254706571776,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 7,
+          "feature": "log_pm10_mean3",
+          "coefficient": 0.11484585752952989,
+          "abs_coefficient": 0.11484585752952989,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 8,
+          "feature": "heating_season",
+          "coefficient": 0.09936062063905776,
+          "abs_coefficient": 0.09936062063905776,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 9,
+          "feature": "month_sin",
+          "coefficient": -0.0634395675139582,
+          "abs_coefficient": 0.0634395675139582,
+          "effect": "lowers risk"
+        }
+      ],
+      "intercept": -0.6783024774549508
+    },
+    "live": {
+      "variant": "live",
+      "features": [
+        "log_pm10_t",
+        "log_pm10_t_minus_1",
+        "log_pm10_mean3",
+        "log_pm10_mean7",
+        "month_sin",
+        "month_cos",
+        "is_weekend",
+        "heating_season",
+        "temp_mean_c_t",
+        "temp_range_c_t",
+        "log1p_precip_mm_t",
+        "wind_max_ms_t",
+        "rh_mean_pct_t",
+        "pressure_mean_hpa_t"
+      ],
+      "chosen_C": 0.1,
+      "C_grid_validation": [
+        {
+          "C": 0.001,
+          "validation_roc_auc": 0.8199749418292465
+        },
+        {
+          "C": 0.01,
+          "validation_roc_auc": 0.8612015989499433
+        },
+        {
+          "C": 0.1,
+          "validation_roc_auc": 0.874017063421037
+        },
+        {
+          "C": 1.0,
+          "validation_roc_auc": 0.8699958236382076
+        },
+        {
+          "C": 10.0,
+          "validation_roc_auc": 0.8689338344967484
+        },
+        {
+          "C": 100.0,
+          "validation_roc_auc": 0.8687429151005309
+        }
+      ],
+      "threshold": 0.54,
+      "threshold_rule": "maximise F1 on the validation rows over thresholds 0.01..0.99",
+      "validation": {
+        "n": 706,
+        "positive_rate": 0.21388101983002833,
+        "roc_auc": 0.874017063421037,
+        "pr_auc": 0.6659168513334801,
+        "brier": 0.12029038133848935,
+        "threshold": 0.54,
+        "precision": 0.6486486486486487,
+        "recall": 0.6357615894039735,
+        "f1": 0.6421404682274248,
+        "tn": 503,
+        "fp": 52,
+        "fn": 55,
+        "tp": 96,
+        "calibration_bins": [
+          {
+            "bin": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "count": 225,
+            "predicted_mean": 0.035169271313962566,
+            "observed_rate": 0.008888888888888889
+          },
+          {
+            "bin": 1,
+            "lower": 0.1,
+            "upper": 0.2,
+            "count": 89,
+            "predicted_mean": 0.1492053185793856,
+            "observed_rate": 0.06741573033707865
+          },
+          {
+            "bin": 2,
+            "lower": 0.2,
+            "upper": 0.30000000000000004,
+            "count": 87,
+            "predicted_mean": 0.24818425386177556,
+            "observed_rate": 0.10344827586206896
+          },
+          {
+            "bin": 3,
+            "lower": 0.30000000000000004,
+            "upper": 0.4,
+            "count": 87,
+            "predicted_mean": 0.35180361539069915,
+            "observed_rate": 0.2413793103448276
+          },
+          {
+            "bin": 4,
+            "lower": 0.4,
+            "upper": 0.5,
+            "count": 46,
+            "predicted_mean": 0.4460799476588618,
+            "observed_rate": 0.2391304347826087
+          },
+          {
+            "bin": 5,
+            "lower": 0.5,
+            "upper": 0.6000000000000001,
+            "count": 58,
+            "predicted_mean": 0.5502593632536252,
+            "observed_rate": 0.4482758620689655
+          },
+          {
+            "bin": 6,
+            "lower": 0.6000000000000001,
+            "upper": 0.7000000000000001,
+            "count": 39,
+            "predicted_mean": 0.6378872288089966,
+            "observed_rate": 0.5128205128205128
+          },
+          {
+            "bin": 7,
+            "lower": 0.7000000000000001,
+            "upper": 0.8,
+            "count": 34,
+            "predicted_mean": 0.7474921470657436,
+            "observed_rate": 0.7352941176470589
+          },
+          {
+            "bin": 8,
+            "lower": 0.8,
+            "upper": 0.9,
+            "count": 26,
+            "predicted_mean": 0.8374473487845719,
+            "observed_rate": 0.6538461538461539
+          },
+          {
+            "bin": 9,
+            "lower": 0.9,
+            "upper": 1.0,
+            "count": 15,
+            "predicted_mean": 0.9298640440961827,
+            "observed_rate": 0.9333333333333333
+          }
+        ]
+      },
+      "test": {
+        "n": 1064,
+        "positive_rate": 0.24530075187969924,
+        "roc_auc": 0.8493866391835215,
+        "pr_auc": 0.6910760292720911,
+        "brier": 0.12642895237161486,
+        "threshold": 0.54,
+        "precision": 0.6865671641791045,
+        "recall": 0.5287356321839081,
+        "f1": 0.5974025974025974,
+        "tn": 740,
+        "fp": 63,
+        "fn": 123,
+        "tp": 138,
+        "calibration_bins": [
+          {
+            "bin": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "count": 348,
+            "predicted_mean": 0.03718927164538074,
+            "observed_rate": 0.03735632183908046
+          },
+          {
+            "bin": 1,
+            "lower": 0.1,
+            "upper": 0.2,
+            "count": 166,
+            "predicted_mean": 0.15185501965447418,
+            "observed_rate": 0.10843373493975904
+          },
+          {
+            "bin": 2,
+            "lower": 0.2,
+            "upper": 0.30000000000000004,
+            "count": 154,
+            "predicted_mean": 0.2489573569221896,
+            "observed_rate": 0.16233766233766234
+          },
+          {
+            "bin": 3,
+            "lower": 0.30000000000000004,
+            "upper": 0.4,
+            "count": 101,
+            "predicted_mean": 0.3484594983383655,
+            "observed_rate": 0.33663366336633666
+          },
+          {
+            "bin": 4,
+            "lower": 0.4,
+            "upper": 0.5,
+            "count": 63,
+            "predicted_mean": 0.44602132488425195,
+            "observed_rate": 0.3492063492063492
+          },
+          {
+            "bin": 5,
+            "lower": 0.5,
+            "upper": 0.6000000000000001,
+            "count": 72,
+            "predicted_mean": 0.5474600874943953,
+            "observed_rate": 0.4583333333333333
+          },
+          {
+            "bin": 6,
+            "lower": 0.6000000000000001,
+            "upper": 0.7000000000000001,
+            "count": 63,
+            "predicted_mean": 0.6475342554527213,
+            "observed_rate": 0.5714285714285714
+          },
+          {
+            "bin": 7,
+            "lower": 0.7000000000000001,
+            "upper": 0.8,
+            "count": 52,
+            "predicted_mean": 0.7499900343113772,
+            "observed_rate": 0.7307692307692307
+          },
+          {
+            "bin": 8,
+            "lower": 0.8,
+            "upper": 0.9,
+            "count": 30,
+            "predicted_mean": 0.8550754236942795,
+            "observed_rate": 0.9
+          },
+          {
+            "bin": 9,
+            "lower": 0.9,
+            "upper": 1.0,
+            "count": 15,
+            "predicted_mean": 0.9385711308370758,
+            "observed_rate": 1.0
+          }
+        ],
+        "roc_auc_bootstrap": {
+          "method": "moving-block bootstrap, block 14 days, 1000 replicates",
+          "seed": 20261007,
+          "valid_replicates": 1000,
+          "ci95_low": 0.8105492879574705,
+          "ci95_high": 0.8802848737083813
+        }
+      },
+      "standardised_coefficient_ranking": [
+        {
+          "rank": 1,
+          "feature": "log_pm10_t",
+          "coefficient": 1.542383969916936,
+          "abs_coefficient": 1.542383969916936,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 2,
+          "feature": "month_cos",
+          "coefficient": -1.3166660514949144,
+          "abs_coefficient": 1.3166660514949144,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 3,
+          "feature": "log_pm10_mean7",
+          "coefficient": 0.4272279013228251,
+          "abs_coefficient": 0.4272279013228251,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 4,
+          "feature": "temp_range_c_t",
+          "coefficient": 0.42605699882183873,
+          "abs_coefficient": 0.42605699882183873,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 5,
+          "feature": "pressure_mean_hpa_t",
+          "coefficient": 0.412891869882269,
+          "abs_coefficient": 0.412891869882269,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 6,
+          "feature": "log_pm10_t_minus_1",
+          "coefficient": -0.3604740285127126,
+          "abs_coefficient": 0.3604740285127126,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 7,
+          "feature": "log_pm10_mean3",
+          "coefficient": 0.25143493919344867,
+          "abs_coefficient": 0.25143493919344867,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 8,
+          "feature": "wind_max_ms_t",
+          "coefficient": -0.22767558474518032,
+          "abs_coefficient": 0.22767558474518032,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 9,
+          "feature": "heating_season",
+          "coefficient": 0.21474759738629517,
+          "abs_coefficient": 0.21474759738629517,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 10,
+          "feature": "log1p_precip_mm_t",
+          "coefficient": -0.18168878931066515,
+          "abs_coefficient": 0.18168878931066515,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 11,
+          "feature": "is_weekend",
+          "coefficient": -0.1516783749870597,
+          "abs_coefficient": 0.1516783749870597,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 12,
+          "feature": "rh_mean_pct_t",
+          "coefficient": -0.0933963047019784,
+          "abs_coefficient": 0.0933963047019784,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 13,
+          "feature": "temp_mean_c_t",
+          "coefficient": 0.02847479124993902,
+          "abs_coefficient": 0.02847479124993902,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 14,
+          "feature": "month_sin",
+          "coefficient": 0.02549964530599621,
+          "abs_coefficient": 0.02549964530599621,
+          "effect": "raises risk"
+        }
+      ],
+      "intercept": -0.8740160252244221
+    },
+    "note": "Features ending in _t1 are ERA5 actuals of the target day, used as a stand-in for a perfect weather forecast. Real forecasts are imperfect, so scores of a model that uses them are an optimistic upper bound."
+  },
+  "baselines": {
+    "pm10_only_logreg": {
+      "variant": "pm10_only",
+      "features": [
+        "log_pm10_t",
+        "log_pm10_t_minus_1",
+        "log_pm10_mean3",
+        "log_pm10_mean7",
+        "month_sin",
+        "month_cos",
+        "is_weekend",
+        "heating_season"
+      ],
+      "chosen_C": 1.0,
+      "C_grid_validation": [
+        {
+          "C": 0.001,
+          "validation_roc_auc": 0.7587017481057217
+        },
+        {
+          "C": 0.01,
+          "validation_roc_auc": 0.8387685698943977
+        },
+        {
+          "C": 0.1,
+          "validation_roc_auc": 0.8616550325159598
+        },
+        {
+          "C": 1.0,
+          "validation_roc_auc": 0.8623709802517748
+        },
+        {
+          "C": 10.0,
+          "validation_roc_auc": 0.8623590477895113
+        },
+        {
+          "C": 100.0,
+          "validation_roc_auc": 0.8623471153272477
+        }
+      ],
+      "threshold": 0.47,
+      "threshold_rule": "maximise F1 on the validation rows over thresholds 0.01..0.99",
+      "validation": {
+        "n": 706,
+        "positive_rate": 0.21388101983002833,
+        "roc_auc": 0.8623709802517748,
+        "pr_auc": 0.6326678357477579,
+        "brier": 0.12062683492480286,
+        "threshold": 0.47,
+        "precision": 0.6058823529411764,
+        "recall": 0.6821192052980133,
+        "f1": 0.6417445482866043,
+        "tn": 488,
+        "fp": 67,
+        "fn": 48,
+        "tp": 103,
+        "calibration_bins": [
+          {
+            "bin": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "count": 225,
+            "predicted_mean": 0.03296930006339551,
+            "observed_rate": 0.017777777777777778
+          },
+          {
+            "bin": 1,
+            "lower": 0.1,
+            "upper": 0.2,
+            "count": 112,
+            "predicted_mean": 0.15478079796402408,
+            "observed_rate": 0.08928571428571429
+          },
+          {
+            "bin": 2,
+            "lower": 0.2,
+            "upper": 0.30000000000000004,
+            "count": 93,
+            "predicted_mean": 0.24992408435158847,
+            "observed_rate": 0.15053763440860216
+          },
+          {
+            "bin": 3,
+            "lower": 0.30000000000000004,
+            "upper": 0.4,
+            "count": 75,
+            "predicted_mean": 0.34873144446789894,
+            "observed_rate": 0.17333333333333334
+          },
+          {
+            "bin": 4,
+            "lower": 0.4,
+            "upper": 0.5,
+            "count": 48,
+            "predicted_mean": 0.44935378476598387,
+            "observed_rate": 0.3125
+          },
+          {
+            "bin": 5,
+            "lower": 0.5,
+            "upper": 0.6000000000000001,
+            "count": 49,
+            "predicted_mean": 0.55044227523887,
+            "observed_rate": 0.4897959183673469
+          },
+          {
+            "bin": 6,
+            "lower": 0.6000000000000001,
+            "upper": 0.7000000000000001,
+            "count": 32,
+            "predicted_mean": 0.6536811780239797,
+            "observed_rate": 0.59375
+          },
+          {
+            "bin": 7,
+            "lower": 0.7000000000000001,
+            "upper": 0.8,
+            "count": 33,
+            "predicted_mean": 0.7485663156671718,
+            "observed_rate": 0.6363636363636364
+          },
+          {
+            "bin": 8,
+            "lower": 0.8,
+            "upper": 0.9,
+            "count": 26,
+            "predicted_mean": 0.8425978446168387,
+            "observed_rate": 0.7692307692307693
+          },
+          {
+            "bin": 9,
+            "lower": 0.9,
+            "upper": 1.0,
+            "count": 13,
+            "predicted_mean": 0.9316400580066708,
+            "observed_rate": 0.8461538461538461
+          }
+        ]
+      },
+      "test": {
+        "n": 1064,
+        "positive_rate": 0.24530075187969924,
+        "roc_auc": 0.8250001192844838,
+        "pr_auc": 0.642769930707005,
+        "brier": 0.1346597944277372,
+        "threshold": 0.47,
+        "precision": 0.6305418719211823,
+        "recall": 0.4904214559386973,
+        "f1": 0.5517241379310345,
+        "tn": 728,
+        "fp": 75,
+        "fn": 133,
+        "tp": 128,
+        "calibration_bins": [
+          {
+            "bin": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "count": 375,
+            "predicted_mean": 0.035581548023923666,
+            "observed_rate": 0.04533333333333334
+          },
+          {
+            "bin": 1,
+            "lower": 0.1,
+            "upper": 0.2,
+            "count": 181,
+            "predicted_mean": 0.14443170415129553,
+            "observed_rate": 0.14917127071823205
+          },
+          {
+            "bin": 2,
+            "lower": 0.2,
+            "upper": 0.30000000000000004,
+            "count": 129,
+            "predicted_mean": 0.24639474840669284,
+            "observed_rate": 0.21705426356589147
+          },
+          {
+            "bin": 3,
+            "lower": 0.30000000000000004,
+            "upper": 0.4,
+            "count": 125,
+            "predicted_mean": 0.35081941139461525,
+            "observed_rate": 0.376
+          },
+          {
+            "bin": 4,
+            "lower": 0.4,
+            "upper": 0.5,
+            "count": 78,
+            "predicted_mean": 0.4492504218353884,
+            "observed_rate": 0.32051282051282054
+          },
+          {
+            "bin": 5,
+            "lower": 0.5,
+            "upper": 0.6000000000000001,
+            "count": 49,
+            "predicted_mean": 0.5479242748250387,
+            "observed_rate": 0.42857142857142855
+          },
+          {
+            "bin": 6,
+            "lower": 0.6000000000000001,
+            "upper": 0.7000000000000001,
+            "count": 41,
+            "predicted_mean": 0.6460343142013973,
+            "observed_rate": 0.6829268292682927
+          },
+          {
+            "bin": 7,
+            "lower": 0.7000000000000001,
+            "upper": 0.8,
+            "count": 45,
+            "predicted_mean": 0.7583950368048865,
+            "observed_rate": 0.6666666666666666
+          },
+          {
+            "bin": 8,
+            "lower": 0.8,
+            "upper": 0.9,
+            "count": 27,
+            "predicted_mean": 0.8515342843397619,
+            "observed_rate": 0.8888888888888888
+          },
+          {
+            "bin": 9,
+            "lower": 0.9,
+            "upper": 1.0,
+            "count": 14,
+            "predicted_mean": 0.952210450486285,
+            "observed_rate": 1.0
+          }
+        ],
+        "roc_auc_bootstrap": {
+          "method": "moving-block bootstrap, block 14 days, 1000 replicates",
+          "seed": 20261007,
+          "valid_replicates": 1000,
+          "ci95_low": 0.7870709871954511,
+          "ci95_high": 0.8567220086219306
+        }
+      },
+      "standardised_coefficient_ranking": [
+        {
+          "rank": 1,
+          "feature": "log_pm10_t",
+          "coefficient": 2.4515777153164895,
+          "abs_coefficient": 2.4515777153164895,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 2,
+          "feature": "month_cos",
+          "coefficient": -1.6776670940047624,
+          "abs_coefficient": 1.6776670940047624,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 3,
+          "feature": "log_pm10_t_minus_1",
+          "coefficient": -0.6276728214104902,
+          "abs_coefficient": 0.6276728214104902,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 4,
+          "feature": "log_pm10_mean7",
+          "coefficient": 0.452880361852674,
+          "abs_coefficient": 0.452880361852674,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 5,
+          "feature": "heating_season",
+          "coefficient": 0.32446069667183536,
+          "abs_coefficient": 0.32446069667183536,
+          "effect": "raises risk"
+        },
+        {
+          "rank": 6,
+          "feature": "month_sin",
+          "coefficient": -0.152364643096489,
+          "abs_coefficient": 0.152364643096489,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 7,
+          "feature": "is_weekend",
+          "coefficient": -0.1350110128151444,
+          "abs_coefficient": 0.1350110128151444,
+          "effect": "lowers risk"
+        },
+        {
+          "rank": 8,
+          "feature": "log_pm10_mean3",
+          "coefficient": -0.028358838108969064,
+          "abs_coefficient": 0.028358838108969064,
+          "effect": "lowers risk"
+        }
+      ],
+      "intercept": -0.8202999193074965
+    },
+    "monthly_climatology": {
+      "description": "Probability is the share of days in the same calendar month of the previous year that exceed the threshold of the target month (the label threshold).",
+      "threshold": 0.24,
+      "threshold_rule": "maximise F1 on the validation rows over thresholds 0.01..0.99",
+      "validation": {
+        "n": 706,
+        "positive_rate": 0.21388101983002833,
+        "roc_auc": 0.5458206550921784,
+        "pr_auc": 0.24902179328235902,
+        "brier": 0.1752459980927074,
+        "threshold": 0.24,
+        "precision": 0.2925764192139738,
+        "recall": 0.44370860927152317,
+        "f1": 0.35263157894736846,
+        "tn": 393,
+        "fp": 162,
+        "fn": 84,
+        "tp": 67,
+        "calibration_bins": [
+          {
+            "bin": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "count": 119,
+            "predicted_mean": 0.041185506460648766,
+            "observed_rate": 0.17647058823529413
+          },
+          {
+            "bin": 1,
+            "lower": 0.1,
+            "upper": 0.2,
+            "count": 271,
+            "predicted_mean": 0.1510539932985537,
+            "observed_rate": 0.17712177121771217
+          },
+          {
+            "bin": 2,
+            "lower": 0.2,
+            "upper": 0.30000000000000004,
+            "count": 254,
+            "predicted_mean": 0.2577873677914843,
+            "observed_rate": 0.25196850393700787
+          },
+          {
+            "bin": 3,
+            "lower": 0.30000000000000004,
+            "upper": 0.4,
+            "count": 31,
+            "predicted_mean": 0.38709677419354827,
+            "observed_rate": 0.2903225806451613
+          },
+          {
+            "bin": 4,
+            "lower": 0.4,
+            "upper": 0.5,
+            "count": 0,
+            "predicted_mean": null,
+            "observed_rate": null
+          },
+          {
+            "bin": 5,
+            "lower": 0.5,
+            "upper": 0.6000000000000001,
+            "count": 31,
+            "predicted_mean": 0.5161290322580644,
+            "observed_rate": 0.2903225806451613
+          },
+          {
+            "bin": 6,
+            "lower": 0.6000000000000001,
+            "upper": 0.7000000000000001,
+            "count": 0,
+            "predicted_mean": null,
+            "observed_rate": null
+          },
+          {
+            "bin": 7,
+            "lower": 0.7000000000000001,
+            "upper": 0.8,
+            "count": 0,
+            "predicted_mean": null,
+            "observed_rate": null
+          },
+          {
+            "bin": 8,
+            "lower": 0.8,
+            "upper": 0.9,
+            "count": 0,
+            "predicted_mean": null,
+            "observed_rate": null
+          },
+          {
+            "bin": 9,
+            "lower": 0.9,
+            "upper": 1.0,
+            "count": 0,
+            "predicted_mean": null,
+            "observed_rate": null
+          }
+        ]
+      },
+      "test": {
+        "n": 1064,
+        "positive_rate": 0.24530075187969924,
+        "roc_auc": 0.5361789839824794,
+        "pr_auc": 0.27530625692793204,
+        "brier": 0.19481897479732338,
+        "threshold": 0.24,
+        "precision": 0.25190839694656486,
+        "recall": 0.5057471264367817,
+        "f1": 0.3363057324840764,
+        "tn": 411,
+        "fp": 392,
+        "fn": 129,
+        "tp": 132,
+        "calibration_bins": [
+          {
+            "bin": 0,
+            "lower": 0.0,
+            "upper": 0.1,
+            "count": 154,
+            "predicted_mean": 0.09090909090909093,
+            "observed_rate": 0.18831168831168832
+          },
+          {
+            "bin": 1,
+            "lower": 0.1,
+            "upper": 0.2,
+            "count": 144,
+            "predicted_mean": 0.15489303959131545,
+            "observed_rate": 0.2847222222222222
+          },
+          {
+            "bin": 2,
+            "lower": 0.2,
+            "upper": 0.30000000000000004,
+            "count": 559,
+            "predicted_mean": 0.2525655755910004,
+            "observed_rate": 0.21645796064400716
+          },
+          {
+            "bin": 3,
+            "lower": 0.30000000000000004,
+            "upper": 0.4,
+            "count": 93,
+            "predicted_mean": 0.3333333333333334,
+            "observed_rate": 0.4946236559139785
+          },
+          {
+            "bin": 4,
+            "lower": 0.4,
+            "upper": 0.5,
+            "count": 84,
+            "predicted_mean": 0.42619047619047634,
+            "observed_rate": 0.17857142857142858
+          },
+          {
+            "bin": 5,
+            "lower": 0.5,
+            "upper": 0.6000000000000001,
+            "count": 0,
+            "predicted_mean": null,
+            "observed_rate": null
+          },
+          {
+            "bin": 6,
+            "lower": 0.6000000000000001,
+            "upper": 0.7000000000000001,
+            "count": 30,
+            "predicted_mean": 0.6666666666666669,
+            "observed_rate": 0.3
+          },
+          {
+            "bin": 7,
+            "lower": 0.7000000000000001,
+            "upper": 0.8,
+            "count": 0,
+            "predicted_mean": null,
+            "observed_rate": null
+          },
+          {
+            "bin": 8,
+            "lower": 0.8,
+            "upper": 0.9,
+            "count": 0,
+            "predicted_mean": null,
+            "observed_rate": null
+          },
+          {
+            "bin": 9,
+            "lower": 0.9,
+            "upper": 1.0,
+            "count": 0,
+            "predicted_mean": null,
+            "observed_rate": null
+          }
+        ],
+        "roc_auc_bootstrap": {
+          "method": "moving-block bootstrap, block 14 days, 1000 replicates",
+          "seed": 20261007,
+          "valid_replicates": 1000,
+          "ci95_low": 0.46037034953996087,
+          "ci95_high": 0.6155432539823484
+        }
+      }
+    },
+    "persistence": {
+      "description": "Predicts a bad day tomorrow exactly when today is a bad day by the same label definition (PM10 of day t above the threshold of its own month).",
+      "threshold": 0.5,
+      "validation": {
+        "n": 706,
+        "positive_rate": 0.21388101983002833,
+        "roc_auc": 0.739747031800012,
+        "pr_auc": 0.4375317211664134,
+        "brier": 0.17422096317280453,
+        "threshold": 0.5,
+        "precision": 0.5933333333333334,
+        "recall": 0.5894039735099338,
+        "f1": 0.5913621262458472,
+        "tn": 494,
+        "fp": 61,
+        "fn": 62,
+        "tp": 89
+      },
+      "test": {
+        "n": 1064,
+        "positive_rate": 0.24530075187969924,
+        "roc_auc": 0.728394001421871,
+        "pr_auc": 0.4487091219703815,
+        "brier": 0.20112781954887218,
+        "threshold": 0.5,
+        "precision": 0.5900383141762452,
+        "recall": 0.5900383141762452,
+        "f1": 0.5900383141762452,
+        "tn": 696,
+        "fp": 107,
+        "fn": 107,
+        "tp": 154,
+        "roc_auc_bootstrap": {
+          "method": "moving-block bootstrap, block 14 days, 1000 replicates",
+          "seed": 20261007,
+          "valid_replicates": 1000,
+          "ci95_low": 0.6901356794761313,
+          "ci95_high": 0.7596362186121247
+        }
+      }
+    }
+  },
+  "secondary_label_report": {
+    "with_next_day_weather": {
+      "definition": "PM10 of day t+1 above 50 ug/m3 (EU daily limit)",
+      "validation": {
+        "class_balance": {
+          "n": 706,
+          "positives": 86,
+          "negatives": 620,
+          "positive_rate": 0.12181303116147309
+        },
+        "roc_auc": 0.8195986496624157,
+        "pr_auc": 0.4704235327357569
+      },
+      "test": {
+        "class_balance": {
+          "n": 1064,
+          "positives": 105,
+          "negatives": 959,
+          "positive_rate": 0.09868421052631579
+        },
+        "roc_auc": 0.7981230448383734,
+        "pr_auc": 0.3075634634223389
+      }
+    },
+    "no_next_day_weather": {
+      "definition": "PM10 of day t+1 above 50 ug/m3 (EU daily limit)",
+      "validation": {
+        "class_balance": {
+          "n": 706,
+          "positives": 86,
+          "negatives": 620,
+          "positive_rate": 0.12181303116147309
+        },
+        "roc_auc": 0.7595648912228058,
+        "pr_auc": 0.37007629192734454
+      },
+      "test": {
+        "class_balance": {
+          "n": 1064,
+          "positives": 105,
+          "negatives": 959,
+          "positive_rate": 0.09868421052631579
+        },
+        "roc_auc": 0.7483489746263469,
+        "pr_auc": 0.27147495665489124
+      }
+    },
+    "note": "Models are trained on the primary label; this only reports how their scores rank days above 50 ug/m3."
+  },
+  "provenance": {
+    "input_files": [
+      {
+        "role": "pm10_kamenitsa_daily",
+        "file": "SPO-BG0051A_00005_100.parquet",
+        "partition": "fetch_date=2026-10-07",
+        "size_bytes": 83708,
+        "sha256": "2bba88856222a5301ed728c080fbae8bcd8eee47f75d712f7bdda2c2a0b78a80"
+      },
+      {
+        "role": "pm25_kamenitsa_daily",
+        "file": "SPO-BG0051A_06001_100.parquet",
+        "partition": "fetch_date=2026-10-07",
+        "size_bytes": 63371,
+        "sha256": "7bb7e97c1e89f2e626811ec93440163562f24e1432d780d454d636d0824268d1"
+      },
+      {
+        "role": "era5_archive_daily",
+        "file": "archive_2013-01-01_2025-12-31.json.gz",
+        "partition": "fetch_date=2026-10-07",
+        "size_bytes": 102406,
+        "sha256": "6a2a148a4aa3b1b732951e13f36c956827bb538c06a078647be8129c4a19dce4"
+      }
+    ],
+    "landed_but_not_used": [
+      "SPO-BG0078A_00005_100.parquet (Trakia PM10, secondary station)"
+    ],
+    "weather_request": {
+      "endpoint": "https://archive-api.open-meteo.com/v1/archive",
+      "latitude": 42.15,
+      "longitude": 24.75,
+      "start_date": "2013-01-01",
+      "end_date": "2025-12-31",
+      "timezone": "Europe/Sofia",
+      "wind_speed_unit": "ms",
+      "daily": [
+        "temperature_2m_mean",
+        "temperature_2m_max",
+        "temperature_2m_min",
+        "precipitation_sum",
+        "wind_speed_10m_max",
+        "wind_gusts_10m_max",
+        "wind_direction_10m_dominant",
+        "shortwave_radiation_sum",
+        "relative_humidity_2m_mean",
+        "surface_pressure_mean",
+        "pressure_msl_mean",
+        "cloud_cover_mean",
+        "dew_point_2m_mean"
+      ]
+    },
+    "weather_response": {
+      "latitude": 42.14411,
+      "longitude": 24.70073,
+      "elevation_m": 166.0,
+      "timezone": "Europe/Sofia",
+      "utc_offset_seconds": 10800,
+      "daily_units": {
+        "time": "iso8601",
+        "temperature_2m_mean": "°C",
+        "temperature_2m_max": "°C",
+        "temperature_2m_min": "°C",
+        "precipitation_sum": "mm",
+        "wind_speed_10m_max": "m/s",
+        "wind_gusts_10m_max": "m/s",
+        "wind_direction_10m_dominant": "°",
+        "shortwave_radiation_sum": "MJ/m²",
+        "relative_humidity_2m_mean": "%",
+        "surface_pressure_mean": "hPa",
+        "pressure_msl_mean": "hPa",
+        "cloud_cover_mean": "%",
+        "dew_point_2m_mean": "°C"
+      },
+      "n_days": 4748
+    },
+    "station_filter": "Validity == 1 and Value >= 0; Value cast with pd.to_numeric"
+  }
+}

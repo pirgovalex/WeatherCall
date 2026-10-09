@@ -1,0 +1,104 @@
+{
+ "model_id": [
+  "pm10_exceed_gbm_v1",
+  "pm10_exceed_logreg_v0"
+ ],
+ "algorithm": [
+  "gradient_boosted_trees",
+  "logistic_regression"
+ ],
+ "trained_at": [
+  "2025-12-31T21:15:00Z",
+  "2025-06-30T20:00:00Z"
+ ],
+ "train_start": [
+  "2022-01-01",
+  "2022-01-01"
+ ],
+ "train_end": [
+  "2025-06-30",
+  "2024-12-31"
+ ],
+ "validation_start": [
+  "2025-07-01",
+  "2025-01-01"
+ ],
+ "validation_end": [
+  "2025-12-31",
+  "2025-06-30"
+ ],
+ "test_start": [
+  "2026-01-01",
+  "2025-07-01"
+ ],
+ "test_end": [
+  "2026-10-13",
+  "2025-12-31"
+ ],
+ "label_id": [
+  "pm10_daily_mean_gt_50",
+  "pm10_daily_mean_gt_50"
+ ],
+ "label_text": [
+  "Daily mean PM10 above the EU daily limit value of 50 ug/m3 on the target day (EEA day, valid days only)",
+  "Daily mean PM10 above the EU daily limit value of 50 ug/m3 on the target day (EEA day, valid days only)"
+ ],
+ "features": [
+  [
+   "pm10_lag_1d",
+   "pm10_mean_7d",
+   "no2_lag_1d",
+   "temperature_2m_forecast_mean",
+   "wind_gusts_10m_forecast_max",
+   "precipitation_forecast_sum",
+   "is_heating_season",
+   "is_weekend"
+  ],
+  [
+   "pm10_lag_1d",
+   "pm10_mean_7d",
+   "is_heating_season",
+   "is_weekend"
+  ]
+ ],
+ "roc_auc_test": [
+  0.842,
+  0.781
+ ],
+ "pr_auc_test": [
+  0.611,
+  0.52
+ ],
+ "brier_test": [
+  0.118,
+  0.139
+ ],
+ "baseline_roc_auc_test_climatology": [
+  0.676,
+  0.668
+ ],
+ "baseline_roc_auc_test_persistence": [
+  0.771,
+  null
+ ],
+ "threshold": [
+  0.35,
+  0.4
+ ],
+ "precision_test": [
+  0.58,
+  0.55
+ ],
+ "recall_test": [
+  0.71,
+  0.62
+ ],
+ "uses_forecast_weather": [
+  true,
+  false
+ ],
+ "limitations": [
+  "Trained on two stations in one city; performance elsewhere is unknown. Archived weather forecasts exist only from 2024, so earlier training rows use analysis values in place of forecasts. Days with fewer than 18 valid hourly values have no label and are excluded. Few test days have a predicted probability above 0.8, so the upper calibration bins are uncertain.",
+  "Superseded by a model that uses weather forecasts. Uses no weather inputs, so it cannot anticipate a change in wind or rain. The persistence baseline was not computed for this model."
+ ]
+}
