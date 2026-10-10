@@ -1,6 +1,11 @@
 """GET /api/v1/aq/daily"""
 
-from .conftest import DAILY_GLOB, query
+import duckdb
+from fastapi.testclient import TestClient
+
+from src.main import create_app
+
+from .conftest import DAILY_GLOB, edit_manifest, query
 
 
 def get(client, **overrides):
@@ -44,7 +49,38 @@ def test_unknown_pollutant_is_404(client):
 
 
 def test_unknown_location_is_404(client):
-    assert get(client, location="plovdiv").status_code == 404
+    assert get(client, location="nowhere").status_code == 404
+
+
+def test_a_location_of_the_daily_mart_only_is_served(marts_copy):
+    """A station's own daily location (stations[].daily_location_id) is not in the hourly mart."""
+    path = marts_copy / "mart_aq_daily" / "latest" / "mart_aq_daily.parquet"
+    tmp = path.with_suffix(".tmp")
+    con = duckdb.connect()
+    try:
+        con.execute(
+            f"COPY (SELECT * FROM read_parquet('{path.as_posix()}') UNION ALL "
+            f"SELECT * REPLACE ('plovdiv-trakia' AS location_id, daily_mean * 1.3 AS daily_mean) "
+            f"FROM read_parquet('{path.as_posix()}') WHERE location_id = 'plovdiv') TO '{tmp.as_posix()}' (FORMAT parquet)"
+        )
+        rows = con.execute(f"SELECT count(*) FROM read_parquet('{tmp.as_posix()}')").fetchone()[0]
+    finally:
+        con.close()
+    tmp.replace(path)
+    edit_manifest(
+        marts_copy,
+        lambda m: m["stations"]["BG0078A"].update(daily_location_id="plovdiv-trakia")
+        or m["marts"]["mart_aq_daily"].update(rows=rows),
+    )
+    app = create_app(allowed_origins=["http://localhost:5173"], marts_dir=marts_copy)
+    with TestClient(app) as client:
+        res = get(client, location="plovdiv-trakia")
+        assert res.status_code == 200, res.text
+        body = res.json()
+        assert body["location_id"] == "plovdiv-trakia" and len(body["days"]) == 14
+        meta = client.get("/api/v1/meta").json()
+        assert meta["stations"]["BG0078A"]["daily_location_id"] == "plovdiv-trakia"
+        assert "daily_location_id" not in meta["stations"]["BG0051A"]
 
 
 def test_range_over_366_days_is_422(client):

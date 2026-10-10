@@ -10,6 +10,7 @@ A small logistic regression that estimates, from data known at the end of day t,
 | `pm10_risk_logreg.json` | The same model as plain numbers: feature names in order, scaler mean and scale, coefficients (standardised and on the raw scale), intercept, C, label definition, periods, threshold, scikit-learn version, input file names, sizes and SHA-256, training date |
 | `pm10_risk_logreg_no_next_day_weather.joblib` / `.json` | Same, without weather of day t+1 (only inputs available at the end of day t) |
 | `pm10_risk_logreg_live.joblib` / `.json` | Variant `live`: PM10 history, calendar and weather of day t without radiation; no PM2.5, no weather of day t+1. Its inputs are all landed for 2026, so `python -m plovdiv.ml.live` scores it for the live row. Test ROC-AUC 0.849 |
+| `pm10_risk_logreg_live_trakia.joblib` / `.json` | The `live` variant trained on Trakia (BG0078A) with its own label thresholds, by `python -m plovdiv.ml.stations`. The JSON carries its own evaluation and the score of the Kamenitsa live model on the same rows. Test ROC-AUC 0.864 (Kamenitsa model on Trakia: 0.834) |
 | `pm10_risk_metrics.json` | All metrics: model, ablations, baselines, class balance, calibration bins, bootstrap interval, coefficient ranking, label thresholds |
 | `pm10_risk_daily_predictions.parquet` | Probability and actual label per target day for the validation and test years (`probability`, `probability_no_next_day_weather`, `probability_live`) |
 
@@ -71,11 +72,18 @@ python -m pytest tests/test_ml_dataset.py tests/test_ml_features.py tests/test_m
 
 Input files are sorted, seeds are fixed and the solver is deterministic, so a second run with the same inputs, library versions and `--trained-at` writes identical files. Options: `--eea-dir`, `--weather-file`, `--out-dir`.
 
-The `.joblib` files need the scikit-learn version recorded in the JSON (1.7.2 for the files in this folder); the JSON weights do not.
+The `.joblib` files need the scikit-learn version recorded in the JSON (1.7.2 for the Kamenitsa files, 1.9.1 for the Trakia file); the JSON weights do not, and the pipeline scores from the JSON weights only.
+
+## Out-of-sample check on 2026
+
+Both live models were replayed on every day of 2026 up to the first live row with live-style inputs
+(`python -m plovdiv.ml.replay`, details in `docs/LIVE_FORECAST_PATH.md`): ROC-AUC 0.894 at Kamenitsa (265 days) and
+0.767 at Trakia (271 days), against 0.665 and 0.697 for persistence. Bad days were rare in 2026 (6 % and 13 %), so the
+probabilities run high relative to what happened.
 
 ## Limits
 
-- One station, 2016 to 2025 targets; about 1500 training rows after dropping incomplete days.
+- Kamenitsa models: one station, 2016 to 2025 targets; about 1500 training rows after dropping incomplete days. The Trakia live model has fewer (its record starts in 2017).
 - Weather is reanalysis at a roughly 25 km grid (grid point 42.144 N, 24.701 E, 166 m), not a station measurement and not a forecast.
 - The label depends on the last three years of data, so the meaning of "bad day" drifts as concentrations change.
 - The weather features are daily summaries. Boundary layer height and hourly detail were not used.

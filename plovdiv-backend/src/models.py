@@ -75,6 +75,7 @@ class StationEntry(BaseModel):
     station_type: str
     area_type: str
     location_id: str
+    daily_location_id: Optional[str] = None
 
 
 class MartsCatalogue(BaseModel):
@@ -122,7 +123,7 @@ class DailyAqResponse(BaseModel):
 
 
 Pollutant = Literal["pm2_5", "pm10", "no2"]
-Split = Literal["train", "validation", "test", "live"]
+Split = Literal["train", "validation", "test", "live", "replay"]
 
 
 class AqTrendResponse(BaseModel):

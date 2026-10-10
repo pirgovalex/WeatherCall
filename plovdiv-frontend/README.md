@@ -9,8 +9,8 @@ The dashboard talks only to the HTTP API described in `contracts/openapi.yaml`. 
 | Page | Content | Endpoints |
 |---|---|---|
 | Now | Latest readings per variable, with the `source_type` shown. A card for the next-day PM10 exceedance risk: probability meter, plain-language label, signed driver bars, model id, split and target date. | `/api/v1/meta`, `/api/v1/series`, `/api/v1/aq/risk?latest=true`, `/api/v1/model/card` |
-| History | PM10 trend, observed against weather-adjusted with an uncertainty band; station switcher (Kamenitsa background, Trakia traffic); daily air-quality chart. | `/api/v1/aq/trend`, `/api/v1/aq/daily` |
-| Forecasts | Calibration reliability chart, performance table against the climatology and persistence baselines, and an empty state for forecast verification. | `/api/v1/model/calibration`, `/api/v1/model/card` |
+| History | PM10 trend, observed against weather-adjusted with an uncertainty band; station switcher (Kamenitsa background, Trakia traffic); daily air-quality chart per station, read from the station's daily location (`stations[].daily_location_id`). | `/api/v1/aq/trend`, `/api/v1/aq/daily` |
+| Forecasts | Calibration reliability chart, performance table against the climatology and persistence baselines, and a track record per station: live calls against what the station measured, the most recent calls, and the replay of the days after the test period. | `/api/v1/model/calibration`, `/api/v1/model/card`, `/api/v1/aq/risk?split=live`, `/api/v1/aq/risk?split=replay` |
 | Method | Data sources and attribution, the model card in prose with its limitations, and how to read each page. | `/api/v1/model/card`, `/api/v1/meta` |
 
 Behaviour that applies throughout:
@@ -82,7 +82,6 @@ src/
   test/         test setup and render helpers
 scripts/        export_mock_data.py
 contracts/      copy of the warehouse data contract (do not edit)
-docs/           UI guidelines and architecture decision records
 ```
 
 Imports run one way: `api`, then `queries`, then `transform`, then `components` and `pages`. `components/charts/UPlotChart.tsx` is the only file that imports uPlot; everything else passes a library-neutral chart spec.
@@ -91,12 +90,7 @@ Imports run one way: `api`, then `queries`, then `transform`, then `components` 
 
 Tests use Vitest, jsdom, `@solidjs/testing-library` and MSW. The API is served by the same handlers as mock mode. Because `msw/node` conflicts with the `browser` export condition used by the Solid plugin, `src/mocks/testServer.ts` resolves requests with MSW's `getResponse` against a stubbed `fetch`. uPlot is replaced by a small fake in component tests.
 
-Covered: time helpers including the 25-hour day, payload transforms, the API client and its error handling, the risk historical rules, every page in its loading, empty, error, 503 and success states, and project rules (no inline styles, no Parquet or DuckDB in the browser, no date library, query keys include the run id).
-
-## Documentation
-
-- [UI guidelines](docs/ui-guidelines.md)
-- [ADR-001: Dashboard architecture](docs/adr/001-dashboard-architecture.md)
+Covered: time helpers including the 25-hour day, payload transforms, the track-record summary, the API client and its error handling, the risk historical rules, and every page in its loading, empty, error, 503 and success states.
 
 ## Data sources
 

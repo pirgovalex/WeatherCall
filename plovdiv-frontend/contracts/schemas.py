@@ -197,6 +197,9 @@ VALID_SPLITS = [
     "validation",
     "test",
     "live",
+    # Out-of-sample days after the test period, scored after the fact with the inputs a live run
+    # would have had (station data as published, forecast-model weather). Not issued in real time.
+    "replay",
 ]
 
 

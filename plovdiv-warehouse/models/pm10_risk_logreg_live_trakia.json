@@ -1,0 +1,420 @@
+{
+  "model": "pm10_risk_logreg_live_trakia",
+  "variant": "live",
+  "station_id": "BG0078A",
+  "task": "P(label = 1 for day t+1 | data known at the end of day t)",
+  "label": {
+    "id": "pm10_gt_p75_same_month_prev3y_v1",
+    "text": "1 if the PM10 daily mean on day t+1 is above the 75th percentile of the PM10 daily means of the same calendar month in the three calendar years immediately before the year of t+1 (strictly earlier data only), else 0.",
+    "quantile": 0.75,
+    "history_years": 3
+  },
+  "secondary_label_reporting_only": "PM10 daily mean above 50 ug/m3",
+  "feature_names": [
+    "log_pm10_t",
+    "log_pm10_t_minus_1",
+    "log_pm10_mean3",
+    "log_pm10_mean7",
+    "month_sin",
+    "month_cos",
+    "is_weekend",
+    "heating_season",
+    "temp_mean_c_t",
+    "temp_range_c_t",
+    "log1p_precip_mm_t",
+    "wind_max_ms_t",
+    "rh_mean_pct_t",
+    "pressure_mean_hpa_t"
+  ],
+  "scaler_mean": [
+    3.6160835645833376,
+    3.6101017594332525,
+    3.6518289224828644,
+    3.6902466823200455,
+    0.2326350867096152,
+    0.09625392135841358,
+    0.2862453531598513,
+    0.6245353159851301,
+    11.496282527881041,
+    8.91710037174721,
+    0.5475404962930182,
+    4.169925650557621,
+    66.53903345724908,
+    998.2631970260225
+  ],
+  "scaler_scale": [
+    0.5427896007202806,
+    0.5433794343289234,
+    0.47077073279914533,
+    0.40468878381628176,
+    0.6163568660444091,
+    0.746136926263975,
+    0.45200547668611646,
+    0.4842426613511905,
+    6.924611642789029,
+    3.419548731227777,
+    0.8623541240624991,
+    1.640750121442906,
+    14.182669164935184,
+    7.274992980376438
+  ],
+  "coefficients_standardised": [
+    1.0067949376046235,
+    -0.21570075056476773,
+    0.10656608513311525,
+    0.13843117944889344,
+    -0.12274738139199337,
+    -0.48970260818667527,
+    -0.3594373806496706,
+    -0.29125611179201916,
+    -0.0137353805819513,
+    0.026265410848641577,
+    -0.0806940862364153,
+    -0.6036255908466289,
+    -0.02136249517052955,
+    0.15516842268490996
+  ],
+  "intercept_standardised": -0.7034883550471464,
+  "coefficients_raw_scale": [
+    1.8548530337880622,
+    -0.39696156486150297,
+    0.22636514487526935,
+    0.3420682385695612,
+    -0.19914985644558278,
+    -0.6563173473248313,
+    -0.7952058087545533,
+    -0.6014672705195414,
+    -0.001983559698435174,
+    0.007680958194507459,
+    -0.09357418719849132,
+    -0.36789611224638485,
+    -0.0015062394054389675,
+    0.02132901338921717
+  ],
+  "intercept_raw_scale": -27.006017966759007,
+  "scoring": "probability = 1 / (1 + exp(-(intercept + sum_i coefficient_i * (x_i - scaler_mean_i) / scaler_scale_i)))",
+  "estimator": {
+    "penalty": "l2",
+    "C": 0.1,
+    "class_weight": "balanced",
+    "solver": "lbfgs",
+    "max_iter": 10000,
+    "n_iter": 13
+  },
+  "threshold": {
+    "value": 0.58,
+    "rule": "maximise F1 on the validation rows over thresholds 0.01..0.99",
+    "positive_if": "probability >= value"
+  },
+  "periods_by_target_date": {
+    "train": [
+      "2016-01-01",
+      "2020-12-31"
+    ],
+    "validation": [
+      "2021-01-01",
+      "2022-12-31"
+    ],
+    "test": [
+      "2023-01-01",
+      "2025-12-31"
+    ]
+  },
+  "rows": {
+    "train": {
+      "n_rows": 269,
+      "first_target_date": "2020-01-01",
+      "last_target_date": "2020-12-31"
+    },
+    "validation": {
+      "n_rows": 586,
+      "first_target_date": "2021-01-01",
+      "last_target_date": "2022-12-31"
+    },
+    "test": {
+      "n_rows": 988,
+      "first_target_date": "2023-01-01",
+      "last_target_date": "2025-12-31"
+    }
+  },
+  "uses_next_day_weather": false,
+  "notes": [
+    "ERA5 days are Europe/Sofia local calendar days; EEA daily values are the daily means as reported by Bulgaria. Both are joined on the calendar date, so the day alignment is approximate."
+  ],
+  "sklearn_version": "1.9.1",
+  "trained_at": "2026-10-10",
+  "provenance": {
+    "input_files": [
+      {
+        "role": "pm10_trakia_daily",
+        "file": "SPO-BG0078A_00005_100.parquet",
+        "partition": "fetch_date=2026-10-07",
+        "size_bytes": 58256,
+        "sha256": "502b1ea3621fda62399f977c48a402cfa2e0660eb8c6b9a16d2e277a881a825c"
+      },
+      {
+        "role": "era5_archive_daily",
+        "file": "archive_2013-01-01_2025-12-31.json.gz",
+        "partition": "fetch_date=2026-10-07",
+        "size_bytes": 102406,
+        "sha256": "6a2a148a4aa3b1b732951e13f36c956827bb538c06a078647be8129c4a19dce4"
+      }
+    ],
+    "weather_request": {
+      "endpoint": "https://archive-api.open-meteo.com/v1/archive",
+      "latitude": 42.15,
+      "longitude": 24.75,
+      "start_date": "2013-01-01",
+      "end_date": "2025-12-31",
+      "timezone": "Europe/Sofia",
+      "wind_speed_unit": "ms",
+      "daily": [
+        "temperature_2m_mean",
+        "temperature_2m_max",
+        "temperature_2m_min",
+        "precipitation_sum",
+        "wind_speed_10m_max",
+        "wind_gusts_10m_max",
+        "wind_direction_10m_dominant",
+        "shortwave_radiation_sum",
+        "relative_humidity_2m_mean",
+        "surface_pressure_mean",
+        "pressure_msl_mean",
+        "cloud_cover_mean",
+        "dew_point_2m_mean"
+      ]
+    },
+    "station_filter": "Validity == 1 and Value >= 0; Value cast with pd.to_numeric"
+  },
+  "evaluation": {
+    "validation": {
+      "n": 586,
+      "positive_rate": 0.21331058020477817,
+      "roc_auc": 0.7891540130151843,
+      "pr_auc": 0.5164228426922375,
+      "brier": 0.16517990053368503,
+      "threshold": 0.58,
+      "precision": 0.5263157894736842,
+      "recall": 0.56,
+      "f1": 0.5426356589147288,
+      "tn": 398,
+      "fp": 63,
+      "fn": 55,
+      "tp": 70,
+      "calibration_bins": [
+        {
+          "bin": 0,
+          "lower": 0.0,
+          "upper": 0.1,
+          "count": 97,
+          "predicted_mean": 0.045433528383854754,
+          "observed_rate": 0.020618556701030927
+        },
+        {
+          "bin": 1,
+          "lower": 0.1,
+          "upper": 0.2,
+          "count": 74,
+          "predicted_mean": 0.14584716387229035,
+          "observed_rate": 0.05405405405405406
+        },
+        {
+          "bin": 2,
+          "lower": 0.2,
+          "upper": 0.30000000000000004,
+          "count": 80,
+          "predicted_mean": 0.24456311030349634,
+          "observed_rate": 0.1375
+        },
+        {
+          "bin": 3,
+          "lower": 0.30000000000000004,
+          "upper": 0.4,
+          "count": 85,
+          "predicted_mean": 0.3497281329683066,
+          "observed_rate": 0.21176470588235294
+        },
+        {
+          "bin": 4,
+          "lower": 0.4,
+          "upper": 0.5,
+          "count": 70,
+          "predicted_mean": 0.4515869074544301,
+          "observed_rate": 0.18571428571428572
+        },
+        {
+          "bin": 5,
+          "lower": 0.5,
+          "upper": 0.6000000000000001,
+          "count": 63,
+          "predicted_mean": 0.5525097159082268,
+          "observed_rate": 0.2222222222222222
+        },
+        {
+          "bin": 6,
+          "lower": 0.6000000000000001,
+          "upper": 0.7000000000000001,
+          "count": 49,
+          "predicted_mean": 0.6470639041017145,
+          "observed_rate": 0.42857142857142855
+        },
+        {
+          "bin": 7,
+          "lower": 0.7000000000000001,
+          "upper": 0.8,
+          "count": 42,
+          "predicted_mean": 0.7431326539641337,
+          "observed_rate": 0.5476190476190477
+        },
+        {
+          "bin": 8,
+          "lower": 0.8,
+          "upper": 0.9,
+          "count": 25,
+          "predicted_mean": 0.8279079651740827,
+          "observed_rate": 0.72
+        },
+        {
+          "bin": 9,
+          "lower": 0.9,
+          "upper": 1.0,
+          "count": 1,
+          "predicted_mean": 0.9002042117088233,
+          "observed_rate": 1.0
+        }
+      ]
+    },
+    "test": {
+      "n": 988,
+      "positive_rate": 0.16902834008097167,
+      "roc_auc": 0.8642811818506714,
+      "pr_auc": 0.6227662082884423,
+      "brier": 0.12765159988954627,
+      "threshold": 0.58,
+      "precision": 0.5947712418300654,
+      "recall": 0.5449101796407185,
+      "f1": 0.56875,
+      "tn": 759,
+      "fp": 62,
+      "fn": 76,
+      "tp": 91,
+      "calibration_bins": [
+        {
+          "bin": 0,
+          "lower": 0.0,
+          "upper": 0.1,
+          "count": 195,
+          "predicted_mean": 0.045033309296023595,
+          "observed_rate": 0.015384615384615385
+        },
+        {
+          "bin": 1,
+          "lower": 0.1,
+          "upper": 0.2,
+          "count": 153,
+          "predicted_mean": 0.15249580913491761,
+          "observed_rate": 0.032679738562091505
+        },
+        {
+          "bin": 2,
+          "lower": 0.2,
+          "upper": 0.30000000000000004,
+          "count": 158,
+          "predicted_mean": 0.24766659681362763,
+          "observed_rate": 0.056962025316455694
+        },
+        {
+          "bin": 3,
+          "lower": 0.30000000000000004,
+          "upper": 0.4,
+          "count": 131,
+          "predicted_mean": 0.3523198648273637,
+          "observed_rate": 0.07633587786259542
+        },
+        {
+          "bin": 4,
+          "lower": 0.4,
+          "upper": 0.5,
+          "count": 118,
+          "predicted_mean": 0.44662329559793834,
+          "observed_rate": 0.19491525423728814
+        },
+        {
+          "bin": 5,
+          "lower": 0.5,
+          "upper": 0.6000000000000001,
+          "count": 102,
+          "predicted_mean": 0.5541023421583785,
+          "observed_rate": 0.3431372549019608
+        },
+        {
+          "bin": 6,
+          "lower": 0.6000000000000001,
+          "upper": 0.7000000000000001,
+          "count": 65,
+          "predicted_mean": 0.6473464781131231,
+          "observed_rate": 0.47692307692307695
+        },
+        {
+          "bin": 7,
+          "lower": 0.7000000000000001,
+          "upper": 0.8,
+          "count": 47,
+          "predicted_mean": 0.7461254510299332,
+          "observed_rate": 0.723404255319149
+        },
+        {
+          "bin": 8,
+          "lower": 0.8,
+          "upper": 0.9,
+          "count": 18,
+          "predicted_mean": 0.8453478789785698,
+          "observed_rate": 0.8888888888888888
+        },
+        {
+          "bin": 9,
+          "lower": 0.9,
+          "upper": 1.0,
+          "count": 1,
+          "predicted_mean": 0.9429639060164596,
+          "observed_rate": 1.0
+        }
+      ],
+      "roc_auc_bootstrap": {
+        "method": "moving-block bootstrap, block 14 days, 1000 replicates",
+        "seed": 20261007,
+        "valid_replicates": 1000,
+        "ci95_low": 0.8280114383610899,
+        "ci95_high": 0.8903482311172075
+      }
+    },
+    "chosen_C": 0.1,
+    "baselines": {
+      "persistence": {
+        "test": {
+          "n": 987,
+          "roc_auc": 0.6900759456696364
+        }
+      },
+      "monthly_climatology": {
+        "test": {
+          "n": 988,
+          "roc_auc": 0.5311581465570685
+        }
+      }
+    }
+  },
+  "reference_model_on_this_station": {
+    "model": "pm10_risk_logreg_live",
+    "station_id": "BG0051A",
+    "test": {
+      "n": 988,
+      "roc_auc": 0.8338450990831978,
+      "pr_auc": 0.5739789388645454,
+      "brier": 0.1516220520742807,
+      "precision": 0.4307116104868914,
+      "recall": 0.688622754491018
+    },
+    "note": "The reference station's live model scored on this station's test rows, for comparison."
+  }
+}

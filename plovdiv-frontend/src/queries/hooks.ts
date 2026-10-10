@@ -10,7 +10,16 @@ import {
   getModelCard,
   getSeries,
 } from '../api/endpoints'
-import type { AqRiskResponse, AqTrendResponse, DailyAqResponse, ModelCalibrationResponse, ModelCardResponse, Pollutant, SeriesResponse } from '../api/types'
+import type {
+  AqRiskResponse,
+  AqTrendResponse,
+  DailyAqResponse,
+  ModelCalibrationResponse,
+  ModelCardResponse,
+  Pollutant,
+  RiskSplit,
+  SeriesResponse,
+} from '../api/types'
 import { LOCATION_ID, SOURCE_TYPE } from '../config'
 import { useMetaContext } from './metaContext'
 import { STALE_DATA, STALE_META } from './retry'
@@ -59,6 +68,8 @@ export interface DailyArgs {
   pollutant: Pollutant
   from: string
   to: string
+  /** Location of the daily series; defaults to the city location. */
+  location?: string
 }
 
 export function useDaily(args: Accessor<DailyArgs | null>) {
@@ -66,10 +77,11 @@ export function useDaily(args: Accessor<DailyArgs | null>) {
   return createQuery<DailyAqResponse, ApiError>(() => {
     const a = args()
     const run = runId()
+    const location = a?.location ?? LOCATION_ID
     return {
-      queryKey: ['daily', run, a?.pollutant, LOCATION_ID, a?.from, a?.to],
+      queryKey: ['daily', run, a?.pollutant, location, a?.from, a?.to],
       enabled: a !== null && run !== undefined,
-      queryFn: ({ signal }) => getAqDaily({ pollutant: a!.pollutant, location: LOCATION_ID, from: a!.from, to: a!.to }, signal),
+      queryFn: ({ signal }) => getAqDaily({ pollutant: a!.pollutant, location, from: a!.from, to: a!.to }, signal),
       staleTime: STALE_DATA,
       placeholderData: keepPreviousData,
     }
@@ -107,6 +119,30 @@ export function useLatestRisk(stationId: Accessor<string | undefined>) {
       queryKey: ['risk-latest', run, id],
       enabled: id !== undefined && run !== undefined,
       queryFn: ({ signal }) => getAqRisk({ station_id: id!, latest: true }, signal),
+      staleTime: STALE_DATA,
+      placeholderData: keepPreviousData,
+    }
+  })
+}
+
+export interface RiskRangeArgs {
+  stationId: string
+  split: RiskSplit
+  from: string
+  to: string
+}
+
+/** Risk rows of one station and split over a range of target dates (at most 366 days). */
+export function useRiskRange(args: Accessor<RiskRangeArgs | null>) {
+  const { runId } = useMetaContext()
+  return createQuery<AqRiskResponse, ApiError>(() => {
+    const a = args()
+    const run = runId()
+    return {
+      queryKey: ['risk-range', run, a?.stationId, a?.split, a?.from, a?.to],
+      enabled: a !== null && run !== undefined,
+      queryFn: ({ signal }) =>
+        getAqRisk({ station_id: a!.stationId, split: a!.split, from: a!.from, to: a!.to }, signal),
       staleTime: STALE_DATA,
       placeholderData: keepPreviousData,
     }

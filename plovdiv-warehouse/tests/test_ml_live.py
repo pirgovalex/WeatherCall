@@ -450,3 +450,220 @@ def test_tampered_store_is_rejected(landing, trained, marts_dir, tmp_path):
     documents = {d["model"]: d for d in marts.model_documents(trained["models_dir"])}
     with pytest.raises(ValueError, match="does not reproduce"):
         marts.live_driver_rows(store, documents)
+
+
+def test_replay_split_is_allowed_by_every_contract_artifact():
+    assert "replay" in schemas.VALID_SPLITS
+    api = yaml.safe_load((REPO_ROOT / "contracts" / "openapi.yaml").read_text(encoding="utf-8"))
+    params = {p["name"]: p for p in api["paths"]["/api/v1/aq/risk"]["get"]["parameters"]}
+    assert "replay" in params["split"]["schema"]["enum"]
+    assert "replay" in api["components"]["schemas"]["AqRiskResponse"]["properties"]["split"]["items"]["enum"]
+
+
+# ---------------------------------------------------------------------------------------
+# Verification of live rows
+# ---------------------------------------------------------------------------------------
+
+
+def _extend_utd(landing, last_hour, fetch_date, value=30.0, invalid_on=None, invalid_hours=0, station="BG0051A"):
+    frame = utd_frame(last_hour=last_hour, value=value)
+    frame["Samplingpoint"] = f"BG/SPO-{station}_00005_100"
+    if invalid_on is not None:
+        day = frame["Start"].dt.normalize() == pd.Timestamp(invalid_on)
+        frame.loc[frame.index[day][:invalid_hours], "Validity"] = -1
+    path = landing / "source=eea" / "endpoint=utd_hourly" / f"fetch_date={fetch_date}" / f"SPO-{station}_00005_100.parquet"
+    return write_utd(path, frame)
+
+
+def test_verify_fills_the_outcome_once_the_target_day_is_complete(landing, trained, marts_dir, tmp_path):
+    from plovdiv.ml import verify
+
+    code, store_path, report = run_cli(landing, trained, marts_dir, tmp_path)
+    assert code == 0
+    store = live.read_store(store_path)
+    checked = pd.Timestamp("2026-03-12T06:00Z")
+
+    # The target day 2026-03-11 is not complete in the landed file: the row waits.
+    waiting, summary = verify.verify_store(store, landing, checked)
+    assert summary["waiting"] == 1 and summary["decided"] == 0
+    assert pd.isna(waiting["actual_label"].iloc[0])
+
+    # A newer file reaches past the end of the target day: the outcome is filled.
+    path = _extend_utd(landing, "2026-03-12 01:00", "2026-03-12")
+    done, summary = verify.verify_store(store, landing, checked)
+    assert summary["decided"] == 1
+    row = done.iloc[0]
+    hourly = live.load_utd_hourly(path)
+    expected = live.utd_daily_means(hourly).loc[pd.Timestamp("2026-03-11")]
+    assert row["actual_pm10"] == pytest.approx(expected["pm10"], abs=1e-3)
+    assert row["actual_valid_hours"] == 24 and row["actual_verification"] == "verified"
+    assert row["label_threshold_ugm3"] == pytest.approx(report["row"]["label_threshold_ugm3"])
+    assert row["actual_label"] == int(row["actual_pm10"] > row["label_threshold_ugm3"])
+    assert row["verified_at"] == checked
+
+    # The store round-trips and the marts publish the outcome.
+    live.write_store(store_path, done)
+    frames, _ = marts.build_all(
+        trained["models_dir"], trained["eea_dir"], trained["weather_file"], n_replicates=5, live_store=store_path
+    )
+    published = frames["mart_aq_risk_daily"]
+    published = published[published["split"] == "live"]
+    assert published["actual_label"].iloc[0] == row["actual_label"]
+
+
+def test_verify_leaves_a_day_with_too_few_hours_undecided(landing, trained, marts_dir, tmp_path):
+    from plovdiv.ml import verify
+
+    code, store_path, _ = run_cli(landing, trained, marts_dir, tmp_path)
+    assert code == 0
+    _extend_utd(landing, "2026-03-12 01:00", "2026-03-12", invalid_on="2026-03-11", invalid_hours=7)
+    done, summary = verify.verify_store(live.read_store(store_path), landing, pd.Timestamp("2026-03-12T06:00Z"))
+    assert summary["undecided_day_incomplete"] == 1
+    assert pd.isna(done["actual_label"].iloc[0]) and done["actual_valid_hours"].iloc[0] == 17
+
+
+def test_verify_scorecard_counts_hits_misses_and_false_alarms():
+    from plovdiv.ml import verify
+
+    store = live.normalise_store(
+        pd.DataFrame(
+            {
+                "station_id": "BG0051A",
+                "model_id": "m",
+                "target_date": pd.date_range("2026-01-01", periods=4),
+                "asof_date": pd.date_range("2025-12-31", periods=4),
+                "issued_at": pd.Timestamp("2026-01-01T00:00Z"),
+                "probability": [0.9, 0.2, 0.7, 0.1],
+                "predicted_label": [1, 0, 1, 0],
+                "actual_label": [1, 1, 0, 0],
+            }
+        )
+    )
+    (card,) = verify.scorecard(store)
+    assert (card["decided"], card["correct"], card["bad_days"], card["bad_days_flagged"], card["false_alarms"]) == (4, 2, 2, 1, 1)
+    assert card["brier"] == pytest.approx(np.mean([0.01, 0.64, 0.49, 0.01]), abs=1e-4)
+
+
+# ---------------------------------------------------------------------------------------
+# Second station
+# ---------------------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def two_station_models(trained, tmp_path):
+    """A copy of the trained models plus the live model of Trakia, and marts built from them."""
+    from plovdiv.ml import stations
+
+    models_dir = tmp_path / "models2"
+    models_dir.mkdir()
+    for p in trained["models_dir"].iterdir():
+        (models_dir / p.name).write_bytes(p.read_bytes())
+    reference = marts.read_json(models_dir / marts.LIVE_MODEL_FILE)
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(metrics, "BOOTSTRAP_REPLICATES", 20)
+        document = stations.train_station(
+            "BG0078A", trained["eea_dir"], trained["weather_file"], models_dir, "2026-01-02", reference
+        )
+    out = tmp_path / "marts2"
+    frames, diagnostics = marts.build_all(models_dir, trained["eea_dir"], trained["weather_file"], n_replicates=5)
+    marts.write_marts(frames, out, diagnostics, "2026-03-01T00:00:00Z", "run-test")
+    return {"models_dir": models_dir, "marts_dir": out, "document": document, "frames": frames}
+
+
+def test_station_model_is_trained_on_its_own_record_and_published(two_station_models):
+    from plovdiv.ml import stations
+
+    doc = two_station_models["document"]
+    assert doc["model"] == stations.live_model_stem("BG0078A") == "pm10_risk_logreg_live_trakia"
+    assert doc["station_id"] == "BG0078A" and doc["variant"] == "live"
+    assert doc["reference_model_on_this_station"]["model"] == "pm10_risk_logreg_live"
+    frames = two_station_models["frames"]
+    card = frames["mart_model_card"].set_index("model_id")
+    assert card.loc[doc["model"], "roc_auc_test"] == doc["evaluation"]["test"]["roc_auc"]
+    risk = frames["mart_aq_risk_daily"]
+    mine = risk[risk["model_id"] == doc["model"]]
+    assert set(mine["station_id"]) == {"BG0078A"} and set(mine["split"]) == {"validation", "test"}
+    for name in ("mart_model_card", "mart_model_calibration", "mart_aq_risk_daily", "mart_aq_risk_drivers"):
+        assert marts.validate(name, marts.to_table(name, frames[name])) == [], name
+
+
+def test_live_scores_every_station_that_has_a_model(landing, trained, two_station_models, tmp_path):
+    _extend_utd(landing, "2026-03-11 01:00", "2026-03-11", value=45.0, station="BG0078A")
+    models = {"models_dir": two_station_models["models_dir"]}
+    code, store_path, report = run_cli(landing, models, two_station_models["marts_dir"], tmp_path)
+    assert code == 0, report
+    assert report["status"] == "scored" and set(report["stations"]) == {"BG0051A", "BG0078A"}
+    store = live.read_store(store_path)
+    assert dict(zip(store["station_id"], store["model_id"])) == {
+        "BG0051A": "pm10_risk_logreg_live",
+        "BG0078A": "pm10_risk_logreg_live_trakia",
+    }
+    risk = pd.read_parquet(marts.mart_path(two_station_models["marts_dir"], "mart_aq_risk_daily"))
+    assert len(risk[risk["split"] == "live"]) == 2
+
+
+def test_live_reports_a_partial_run_when_one_station_has_no_data(landing, trained, two_station_models, tmp_path):
+    models = {"models_dir": two_station_models["models_dir"]}
+    code, store_path, report = run_cli(landing, models, two_station_models["marts_dir"], tmp_path)
+    assert code == 2
+    assert report["status"] == "partial"
+    assert report["stations"]["BG0051A"]["status"] == "scored"
+    assert "no landed UTD hourly file" in report["stations"]["BG0078A"]["reason"]
+    assert set(live.read_store(store_path)["station_id"]) == {"BG0051A"}
+
+
+# ---------------------------------------------------------------------------------------
+# Replay
+# ---------------------------------------------------------------------------------------
+
+
+def test_replay_scores_past_days_with_inputs_cut_at_the_as_of_day(landing, trained, monkeypatch):
+    from plovdiv.ml import replay
+
+    monkeypatch.setattr(replay, "FIRST_DAY", pd.Timestamp("2026-03-09"))
+    document = marts.read_json(trained["models_dir"] / marts.LIVE_MODEL_FILE)
+    # The older capture starts on 2026-03-07, so it covers every hour of local day 2026-03-08.
+    weather = live.load_capture(next(p for p in live.capture_files(landing) if p.name == "older.json.gz")).hourly
+    era5 = dataset.load_weather(trained["weather_file"])
+    rows, report = replay.replay_station("BG0051A", document, landing, weather, era5, before=None)
+    targets = [r["target_date"] for r in rows]
+    # The newest complete day is 2026-03-10, so the last target is 2026-03-10 (as-of 2026-03-09).
+    assert targets == [pd.Timestamp("2026-03-09"), pd.Timestamp("2026-03-10")]
+    for r in rows:
+        assert r["split"] == "replay" and r["issued_at"] == live.eea_day_end_utc(r["asof_date"])
+        assert r["predicted_label"] == int(r["probability"] >= r["threshold"])
+    # Stopping before the first live target leaves that day to the live store.
+    rows, _ = replay.replay_station("BG0051A", document, landing, weather, era5, before=pd.Timestamp("2026-03-10"))
+    assert [r["target_date"] for r in rows] == [pd.Timestamp("2026-03-09")]
+    store = live.normalise_store(pd.DataFrame(rows))
+    assert marts.live_risk_rows(store, split="replay")["split"].tolist() == ["replay"]
+
+
+# ---------------------------------------------------------------------------------------
+# mart_aq_daily past the E1a record
+# ---------------------------------------------------------------------------------------
+
+
+def test_daily_mart_continues_with_utd_days_after_e1a(landing, trained):
+    from plovdiv.marts import core
+
+    # Only the Kamenitsa PM10 file: the synthetic second-station file reuses Kamenitsa's sampling point.
+    eea_dir = landing / "e1a_only"
+    eea_dir.mkdir()
+    name = f"SPO-BG0051A_{dataset.PM10_CODE}_100.parquet"
+    (eea_dir / name).write_bytes(next(landing.glob(f"source=eea/endpoint=e1a_daily/*/{name}")).read_bytes())
+    daily, _ = core.build_daily(eea_dir)
+    _extend_utd(landing, "2026-03-11 01:00", "2026-03-11", invalid_on="2026-02-02", invalid_hours=10)
+    extended, notes = core.extend_daily_with_utd(daily, landing)
+    added = extended[(extended["location_id"] == "plovdiv") & (pd.to_datetime(extended["day"]) > "2025-12-31")]
+    assert added["day"].min() == pd.Timestamp("2026-01-01").date()
+    assert added["day"].max() == pd.Timestamp("2026-03-10").date()  # 2026-03-11 is still in progress
+    feb2 = added[added["day"] == pd.Timestamp("2026-02-02").date()].iloc[0]
+    assert feb2["valid_hours"] == 14 and not feb2["is_valid_day"] and pd.isna(feb2["daily_mean"])
+    assert added[added["day"] != pd.Timestamp("2026-02-02").date()]["valid_hours"].eq(24).all()
+    # E1a rows are untouched and the mart still passes its schema.
+    before = daily[daily["location_id"] == "plovdiv"]
+    after = extended[(extended["location_id"] == "plovdiv") & (pd.to_datetime(extended["day"]) <= "2025-12-31")]
+    pd.testing.assert_frame_equal(before.reset_index(drop=True), after.reset_index(drop=True))
+    schemas.mart_aq_daily_schema.validate(extended)
+    assert notes["utd_extension"]["BG0051A"]["days_added"] == 69

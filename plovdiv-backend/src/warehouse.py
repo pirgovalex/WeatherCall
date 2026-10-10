@@ -105,6 +105,9 @@ class Snapshot:
     mtime: float
     # Globs of the optional marts that the manifest declares, keyed by mart name.
     optional_globs: dict = field(default_factory=dict)
+    # Locations of the daily mart. A station can publish its daily means under a location of its own
+    # (manifest stations[].daily_location_id) that the hourly mart does not have.
+    daily_locations: frozenset = frozenset()
 
     def mart_glob(self, mart: str) -> str:
         """Glob of an optional mart. Raises 503 when the manifest does not declare it."""
@@ -222,7 +225,10 @@ class Warehouse:
                     raise StartupError(f"{mart} has no column for: {', '.join(absent)}.")
 
         locations = self._locations(globs[HOURLY_MART])
-        return Snapshot(manifest, globs[HOURLY_MART], globs[DAILY_MART], locations, mtime, optional)
+        daily_locations = self._locations(globs[DAILY_MART])
+        return Snapshot(
+            manifest, globs[HOURLY_MART], globs[DAILY_MART], locations, mtime, optional, daily_locations
+        )
 
     def _resolve_glob(self, mart: str, pattern: str) -> str:
         full = os.path.normpath(os.path.join(self.marts_dir, pattern))

@@ -138,6 +138,7 @@ export const SPLIT_LABELS: Record<string, string> = {
   validation: 'Validation data',
   test: 'Test data',
   live: 'Live',
+  replay: 'Replay (scored afterwards)',
 }
 
 export function splitLabel(split: string): string {

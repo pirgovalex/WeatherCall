@@ -36,13 +36,33 @@ describe('History page', () => {
     renderApp('/history')
     await screen.findByRole('img', { name: 'Kamenitsa monthly PM10 trend' })
     expect(screen.getByText(/Kamenitsa is a background station/)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Trakia (traffic)' }))
+    const trendSection = screen.getByRole('region', { name: 'Monthly PM10 trend' })
+    await user.click(within(trendSection).getByRole('button', { name: 'Trakia (traffic)' }))
     const chart = await screen.findByRole('img', { name: 'Trakia monthly PM10 trend' })
     expect(screen.getByText(/Trakia is a traffic station/)).toBeInTheDocument()
     // The month without valid days is a gap in the summary and a row in the table.
     expect(chart.closest('figure')).toHaveTextContent('1 month had no valid days')
     const table = within(chart.closest('figure')!).getByRole('table', { hidden: true })
     expect(within(table).getByText('Mar 2026').closest('tr')).toHaveTextContent('No value')
+  })
+
+  it('asks for the daily means of the chosen station under its daily location', async () => {
+    const user = userEvent.setup()
+    const locations: string[] = []
+    server.use(
+      http.get(`${api}/api/v1/aq/daily`, ({ request }) => {
+        // Record the location and fall through to the default handler.
+        locations.push(new URL(request.url).searchParams.get('location') ?? '')
+        return undefined
+      }),
+    )
+    renderApp('/history')
+    await screen.findByRole('img', { name: 'PM10 daily mean time series' })
+    const daily = screen.getByRole('region', { name: 'Daily means' })
+    await user.click(within(daily).getByRole('button', { name: 'Trakia (traffic)' }))
+    await waitFor(() => expect(within(daily).getByRole('button', { name: 'Trakia (traffic)' })).toHaveAttribute('aria-pressed', 'true'))
+    // The fixture catalogue gives both stations the city location and no daily location of their own.
+    expect(new Set(locations)).toEqual(new Set(['plovdiv']))
   })
 
   it('shows the daily chart with the invalid day called out', async () => {

@@ -1,7 +1,7 @@
 import CalibrationPanel from '../components/forecasts/CalibrationPanel'
 import ModelGate from '../components/forecasts/ModelGate'
 import PerformanceTable from '../components/forecasts/PerformanceTable'
-import VerificationEmpty from '../components/forecasts/VerificationEmpty'
+import TrackRecord from '../components/forecasts/TrackRecord'
 import PageHeader from '../components/ui/PageHeader'
 import Section from '../components/ui/Section'
 
@@ -35,9 +35,9 @@ export default function Forecasts() {
       <Section
         id="verification"
         title="Forecast verification"
-        intro="Archived forecasts compared with what happened."
+        intro="The model's calls compared with what the station measured afterwards."
       >
-        <VerificationEmpty />
+        <TrackRecord />
       </Section>
     </>
   )

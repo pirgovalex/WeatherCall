@@ -5,6 +5,8 @@ export interface Station {
   label: string
   stationType: string
   areaType: string
+  /** Location of the station's daily means in /aq/daily (its own daily location, else its location). */
+  dailyLocationId: string
 }
 
 /** Stations from the manifest catalogue, in catalogue order. Empty when none is published. */
@@ -16,6 +18,7 @@ export function stationsFrom(meta: MetaResponse | undefined): Station[] {
     label: s.label,
     stationType: s.station_type,
     areaType: s.area_type,
+    dailyLocationId: s.daily_location_id ?? s.location_id,
   }))
 }
 

@@ -1,5 +1,6 @@
 #!/bin/sh
-# One full pipeline run: capture, land station data, score the live row, rebuild marts.
+# One full pipeline run: capture, land station data, check past live rows against what happened,
+# score the live rows of every station, rebuild marts.
 # Each step logs its own outcome; a failed capture does not stop the later steps, so the
 # marts are always rebuilt from whatever has landed. Run from anywhere; paths are absolute.
 
@@ -17,6 +18,9 @@ step() {
 
 step "forecast capture" "$PYTHON" -m plovdiv.extract.fetch_forecasts
 step "EEA station capture" "$PYTHON" -m plovdiv.extract.fetch_eea_utd
+# Outcomes of past live and replay rows, from the station data just landed; the model marts publish them.
+step "verify live rows" "$PYTHON" -m plovdiv.ml.verify
+step "verify replay rows" "$PYTHON" -m plovdiv.ml.verify --store /app/data/live/pm10_risk_replay.parquet
 # Model marts first: the live step requires the live model to be in the model card.
 step "model marts" "$PYTHON" -m plovdiv.ml.marts
 # Exit 2 means the live row was refused (stale or missing inputs); the reason is in data/live/last_run.json.

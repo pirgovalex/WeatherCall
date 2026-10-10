@@ -80,24 +80,28 @@ NULL cases. `contracts/fixtures/README.md` describes them.
 
 | Area | State |
 |---|---|
-| Raw forecast capture (Open-Meteo, CAMS Europe) | Working, with retry, atomic writes and a Task Scheduler script (`scripts/register_capture_task.ps1`, every 6 hours while the PC is on) |
+| Raw forecast capture (Open-Meteo, CAMS Europe) | Working, with retry and atomic writes. Runs every 6 hours in the `ingest` container (`scripts/run_pipeline.sh`) |
 | Data contract, schemas and fixtures | Complete and tested |
-| Next-day PM10 risk model (`src/plovdiv/ml`, `models/`) | Trained on station and reanalysis history, see `models/README.md` |
-| Model and trend marts (`python -m plovdiv.ml.marts`) | Built and validated against the contract. Real data, one station for the risk marts, two for the trend |
-| Required marts and `manifest.json` (`python -m plovdiv.marts.core`) | Built and validated, from real landed files, by a **direct landing-to-mart path** that stands in for bronze and dbt until they exist (see below). `manifest.json` is the authoritative manifest |
-| Bronze layer, dbt models | Built. |
+| Next-day PM10 risk model (`src/plovdiv/ml`, `models/`) | Trained on station and reanalysis history for Kamenitsa, plus a live model trained on Trakia's own record, see `models/README.md` |
+| Model and trend marts (`python -m plovdiv.ml.marts`) | Built and validated against the contract. Real data, two stations for the risk and trend marts |
+| Required marts and `manifest.json` (`python -m plovdiv.marts.core`) | Built and validated, from real landed files, by a **direct landing-to-mart path** (see below). `mart_aq_daily` continues past the verified E1a record with daily means of the hourly 2026 files. `manifest.json` is the authoritative manifest |
+| dbt models (`dbt/`) | Staging and mart models exist but are not run by the pipeline; the direct path above builds the marts |
 | Orchestration (Dagster), backfills, revision sweeps | Planned |
-| Station observations (EEA) | Verified daily files landed once for three series (2013 to 2025), and unverified hourly PM10 for 2026 landed once for two stations (not yet used by a mart). No scheduled EEA download yet |
-| Live next-day risk row | Not built. `docs/LIVE_FORECAST_PATH.md` lists what is missing |
+| Station observations (EEA) | Verified daily files (2013 to 2025) landed once; unverified hourly PM10 for 2026 downloaded on every pipeline run for both stations |
+| Live risk rows (`python -m plovdiv.ml.live`) | Scored on every run for Kamenitsa and Trakia, then checked against the station by `python -m plovdiv.ml.verify` once the day is complete. `docs/LIVE_FORECAST_PATH.md` has the rules and the 2026 replay |
 
-## Docker Setup (Recommended)
+## Docker setup
 
-To ensure complete isolation and project integrity, you can run the ingestion pipeline via Docker:
+The whole stack (pipeline, API and dashboard) is started from `../plovdiv-stack`:
 
 ```bash
-docker-compose up -d ingest
+cd ../plovdiv-stack
+docker compose up -d --build
 ```
-This automatically schedules the 6-hour capture tasks in a protected, read-only code environment.
+
+The `ingest` container runs `scripts/run_pipeline.sh` every 6 hours: forecast capture, EEA station download,
+verification of past live rows, model marts, live rows, core marts. Code and models are mounted read-only; `data/`
+is mounted read-write.
 
 ## Getting started
 

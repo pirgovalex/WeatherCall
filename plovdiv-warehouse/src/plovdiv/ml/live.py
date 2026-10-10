@@ -41,7 +41,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from plovdiv.ml import dataset, features, marts
+from plovdiv.ml import dataset, features, marts, stations
 
 LANDING = marts.LANDING
 DEFAULT_MODELS_DIR = marts.DEFAULT_MODELS_DIR
@@ -411,14 +411,43 @@ def score_live(
 STORE_COLUMNS = [
     "station_id", "target_date", "issued_at", "probability", "label_id", "split", "actual_label",
     "model_id", "asof_date", "threshold", "predicted_label", "features_json", "inputs_json",
+    # Filled by `python -m plovdiv.ml.verify` once the target day is complete in a station file.
+    "label_threshold_ugm3", "actual_pm10", "actual_valid_hours", "actual_verification", "verified_at",
 ]
+
+
+def normalise_store(store: pd.DataFrame) -> pd.DataFrame:
+    """Store with every column of STORE_COLUMNS, in order, with stable types. Older files gain the new columns."""
+    store = store.reindex(columns=STORE_COLUMNS)
+    store["target_date"] = pd.to_datetime(store["target_date"])
+    store["asof_date"] = pd.to_datetime(store["asof_date"])
+    store["issued_at"] = pd.to_datetime(store["issued_at"], utc=True).astype("datetime64[us, UTC]")
+    store["verified_at"] = pd.to_datetime(store["verified_at"], utc=True).astype("datetime64[us, UTC]")
+    store["actual_label"] = store["actual_label"].astype("Int64")
+    store["actual_valid_hours"] = store["actual_valid_hours"].astype("Int64")
+    store["predicted_label"] = store["predicted_label"].astype("Int64")
+    for column in ("probability", "threshold", "label_threshold_ugm3", "actual_pm10"):
+        store[column] = pd.to_numeric(store[column], errors="coerce").astype("float64")
+    store["actual_verification"] = store["actual_verification"].astype("string")
+    return store
 
 
 def read_store(path: Path) -> pd.DataFrame:
     path = Path(path)
     if not path.exists():
-        return pd.DataFrame(columns=STORE_COLUMNS)
-    return pd.read_parquet(path)
+        return normalise_store(pd.DataFrame(columns=STORE_COLUMNS))
+    return normalise_store(pd.read_parquet(path))
+
+
+def write_store(path: Path, store: pd.DataFrame) -> pd.DataFrame:
+    """Write the store atomically (temporary file, then rename), sorted by its key."""
+    path = Path(path)
+    store = normalise_store(store).sort_values(["station_id", "target_date", "model_id"]).reset_index(drop=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    store.to_parquet(tmp, index=False)
+    tmp.replace(path)
+    return store
 
 
 def upsert_store(path: Path, result: LiveResult) -> pd.DataFrame:
@@ -434,25 +463,15 @@ def upsert_store(path: Path, result: LiveResult) -> pd.DataFrame:
             }
         ]
     )
-    new["target_date"] = pd.to_datetime(new["target_date"])
-    new["asof_date"] = pd.to_datetime(new["asof_date"])
+    new = normalise_store(new)
     if len(store):
-        store["target_date"] = pd.to_datetime(store["target_date"])
         key = (store["station_id"] == result.row["station_id"]) & (
             store["target_date"] == pd.Timestamp(result.row["target_date"])
         ) & (store["model_id"] == result.row["model_id"])
-        store = store[~key]
-        store = pd.concat([store, new], ignore_index=True)
+        store = pd.concat([store[~key], new], ignore_index=True)
     else:
         store = new
-    store = store[STORE_COLUMNS].sort_values(["station_id", "target_date", "model_id"]).reset_index(drop=True)
-    store["issued_at"] = pd.to_datetime(store["issued_at"], utc=True).astype("datetime64[us, UTC]")
-    store["actual_label"] = store["actual_label"].astype("Int64")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp")
-    store.to_parquet(tmp, index=False)
-    tmp.replace(path)
-    return store
+    return write_store(path, store)
 
 
 def _manifest_refresh(marts_dir: Path, frames: dict[str, pd.DataFrame], issued_at: pd.Timestamp) -> dict | None:
@@ -560,23 +579,28 @@ def run(
     issued_at: pd.Timestamp,
     utd_file: Path | None = None,
     write_marts: bool = True,
+    station_id: str = dataset.STATION_ID,
 ) -> dict:
     """Score, store and publish one live row. Raises LiveInputError when an input is not usable."""
-    model_file = Path(models_dir) / marts.LIVE_MODEL_FILE
+    model_file = Path(models_dir) / f"{stations.live_model_stem(station_id)}.json"
     if not model_file.exists():
-        raise LiveInputError(f"{model_file} does not exist; train with python -m plovdiv.ml.train")
+        trainer = "plovdiv.ml.train" if station_id == dataset.STATION_ID else "plovdiv.ml.stations"
+        raise LiveInputError(f"{model_file} does not exist; train with python -m {trainer}")
     document = marts.read_json(model_file)
+    if document.get("station_id", dataset.STATION_ID) != station_id:
+        raise LiveInputError(f"{model_file.name} is the model of station {document.get('station_id')}, not {station_id}")
     try:
         era5_file = _era5_file(landing)
     except FileNotFoundError as exc:
         raise LiveInputError(str(exc)) from exc
     result = score_live(
         document,
-        utd_file=Path(utd_file) if utd_file else latest_utd_file(landing),
-        e1a_file=latest_e1a_file(landing),
+        utd_file=Path(utd_file) if utd_file else latest_utd_file(landing, station_id),
+        e1a_file=latest_e1a_file(landing, station_id),
         era5_file=era5_file,
         capture_paths=capture_files(landing),
         issued_at=issued_at,
+        station_id=station_id,
     )
     report = {"status": "scored", "row": _json_row(result.row), "features": result.features, "inputs": result.inputs}
     if write_marts:
@@ -609,33 +633,65 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--report", type=Path, default=None, help="run report (default: next to the store)")
     parser.add_argument("--issued-at", default=None, help="issue time, ISO-8601 (default: now, UTC)")
     parser.add_argument("--dry-run", action="store_true", help="score and print, write nothing but the report")
+    parser.add_argument(
+        "--station",
+        action="append",
+        default=None,
+        help="station to score (repeatable). Default: Kamenitsa plus every station with a live model file",
+    )
     args = parser.parse_args(argv)
 
     issued_at = pd.Timestamp(args.issued_at) if args.issued_at else pd.Timestamp.now(tz="UTC")
     if issued_at.tzinfo is None:
         parser.error("--issued-at needs a time zone, for example 2026-10-09T13:00:00Z")
     issued_at = issued_at.tz_convert("UTC").floor("s")
+    chosen = args.station or stations_to_score(Path(args.models_dir))
+    unknown = sorted(set(chosen) - set(stations.live_stations()))
+    if unknown:
+        parser.error(f"no live model is defined for {unknown}")
+    if args.utd_file and len(chosen) > 1:
+        parser.error("--utd-file needs exactly one --station")
     report_path = args.report or Path(args.store).parent / "last_run.json"
-    try:
-        report = run(
-            args.landing_dir, args.models_dir, args.marts_dir, args.store, issued_at,
-            utd_file=args.utd_file, write_marts=not args.dry_run,
+
+    reports = {}
+    for station_id in chosen:
+        try:
+            report = run(
+                args.landing_dir, args.models_dir, args.marts_dir, args.store, issued_at,
+                utd_file=args.utd_file, write_marts=not args.dry_run, station_id=station_id,
+            )
+        except LiveInputError as exc:
+            reports[station_id] = {"status": "refused", "issued_at": issued_at.isoformat(), "reason": str(exc)}
+            print(f"NO LIVE ROW for {station_id}: {exc}", file=sys.stderr)
+            continue
+        report["issued_at"] = issued_at.isoformat()
+        reports[station_id] = report
+        row = report["row"]
+        print(
+            f"live row: station {row['station_id']} as-of {row['asof_date']} target {row['target_date']} "
+            f"probability {row['probability']:.4f} threshold {row['threshold']:.2f} "
+            f"label {row['predicted_label']} model {row['model_id']} issued {row['issued_at']}"
         )
-    except LiveInputError as exc:
-        write_report(report_path, {"status": "refused", "issued_at": issued_at.isoformat(), "reason": str(exc)})
-        print(f"NO LIVE ROW: {exc}", file=sys.stderr)
-        return 2
-    report["issued_at"] = issued_at.isoformat()
-    write_report(report_path, report)
-    row = report["row"]
-    print(
-        f"live row: station {row['station_id']} as-of {row['asof_date']} target {row['target_date']} "
-        f"probability {row['probability']:.4f} threshold {row['threshold']:.2f} "
-        f"label {row['predicted_label']} model {row['model_id']} issued {row['issued_at']}"
-    )
+
+    refused = [sid for sid, r in reports.items() if r["status"] == "refused"]
+    if len(reports) == 1:
+        # One station: the report keeps the flat layout of a single run.
+        write_report(report_path, next(iter(reports.values())))
+    else:
+        status = "refused" if len(refused) == len(reports) else ("partial" if refused else "scored")
+        write_report(report_path, {"status": status, "issued_at": issued_at.isoformat(), "stations": reports})
     if args.dry_run:
         print("dry run: nothing written except the report")
-    return 0
+    return 2 if refused else 0
+
+
+def stations_to_score(models_dir: Path) -> list[str]:
+    """The reference station, plus every secondary station whose live model file exists."""
+    chosen = [dataset.STATION_ID]
+    for station_id in stations.live_stations():
+        if station_id != dataset.STATION_ID and (Path(models_dir) / f"{stations.live_model_stem(station_id)}.json").exists():
+            chosen.append(station_id)
+    return chosen
 
 
 if __name__ == "__main__":

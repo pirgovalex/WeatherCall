@@ -5,7 +5,9 @@
 This is a direct landing-to-mart path. The bronze layer and the dbt models are not built yet, so the
 two required marts of the contract are produced here, reading the landed files directly:
 
-    mart_aq_daily            EEA E1a daily station means (data/landing/source=eea/endpoint=e1a_daily)
+    mart_aq_daily            EEA E1a daily station means (data/landing/source=eea/endpoint=e1a_daily),
+                             extended past the E1a record with PM10 daily means of the hourly
+                             up-to-date files (data/landing/source=eea/endpoint=utd_hourly)
     mart_weather_aq_hourly   CAMS Europe air quality and Open-Meteo (ECMWF IFS) weather snapshots
                              (data/landing/source=cams, data/landing/source=openmeteo)
 
@@ -78,6 +80,7 @@ from contracts import make_fixtures as contract_types  # noqa: E402
 from contracts import schemas  # noqa: E402
 from contracts.version import SCHEMA_VERSION  # noqa: E402
 
+from plovdiv.ml import live  # noqa: E402
 from plovdiv.ml import marts as model_marts  # noqa: E402
 
 LANDING = model_marts.LANDING
@@ -322,6 +325,69 @@ def build_daily(eea_dir: Path) -> tuple[pd.DataFrame, dict]:
         ),
     }
     return daily, diagnostics
+
+
+def utd_pm10_files(landing: Path) -> dict[str, Path]:
+    """Newest landed EEA up-to-date (UTD) hourly PM10 file per station with a daily location."""
+    found = {}
+    for station_id in DAILY_LOCATIONS:
+        try:
+            found[station_id] = live.latest_utd_file(Path(landing), station_id)
+        except live.LiveInputError:
+            continue
+    return found
+
+
+def extend_daily_with_utd(daily: pd.DataFrame, landing: Path) -> tuple[pd.DataFrame, dict]:
+    """Add the PM10 days after the verified E1a record, built from the hourly UTD files.
+
+    E1a stays the source wherever it reports a day. For later days the daily mean is the mean of the
+    hours with Validity 1 and a non-negative value, published only when at least 18 hours are valid (the
+    rule of `is_valid_day`, the same rule the live row uses). Here `valid_hours` is a real count of hours.
+    Only complete EEA days are added: the day still in progress at the end of the file is left out.
+    UTD values are not verified by the reporting country yet; the diagnostics keep the verification
+    status per station.
+    """
+    files = utd_pm10_files(landing)
+    parts, notes = [daily], {}
+    for station_id, path in sorted(files.items()):
+        location = DAILY_LOCATIONS[station_id]
+        hourly = live.load_utd_hourly(path)
+        means = live.utd_daily_means(hourly)
+        closed = live.latest_closed_day(hourly)
+        mine = daily[(daily["location_id"] == location) & (daily["pollutant"] == "pm10")]
+        last_e1a = pd.Timestamp(max(mine["day"])) if len(mine) else None
+        first = last_e1a + pd.Timedelta(days=1) if last_e1a is not None else means.index.min()
+        if first > closed:
+            notes[station_id] = {"file": f"{path.parent.name}/{path.name}", "days_added": 0}
+            continue
+        days = pd.date_range(first, closed, freq="D")
+        block = means.reindex(days)
+        valid_hours = block["valid_hours"].fillna(0).clip(0, HOURS_PER_DAY).astype("int64")
+        parts.append(
+            pd.DataFrame(
+                {
+                    "day": [d.date() for d in days],
+                    "location_id": location,
+                    "pollutant": "pm10",
+                    "daily_mean": block["pm10"].round(VALUE_DECIMALS).to_numpy(dtype="float64"),
+                    "valid_hours": valid_hours.to_numpy(),
+                    "is_valid_day": (valid_hours >= MIN_VALID_HOURS).to_numpy(),
+                }
+            )
+        )
+        status = block["verification"].fillna("none").value_counts()
+        notes[station_id] = {
+            "file": f"{path.parent.name}/{path.name}",
+            "first_day": days[0].date().isoformat(),
+            "last_day": days[-1].date().isoformat(),
+            "days_added": int(len(days)),
+            "valid_days": int((valid_hours >= MIN_VALID_HOURS).sum()),
+            "verification_of_valid_hours": {str(k): int(v) for k, v in sorted(status.items())},
+        }
+    out = pd.concat(parts, ignore_index=True)
+    out = out.sort_values(["day", "location_id", "pollutant"]).reset_index(drop=True)
+    return out, {"utd_extension": notes}
 
 
 # ---------------------------------------------------------------------------------------
@@ -788,10 +854,12 @@ def build(landing: Path, eea_dir: Path, out_dir: Path, generated_at: str) -> dic
     """
     landing, eea_dir, out_dir = Path(landing), Path(eea_dir), Path(out_dir)
     daily, daily_diagnostics = build_daily(eea_dir)
+    daily, utd_diagnostics = extend_daily_with_utd(daily, landing)
+    daily_diagnostics.update(utd_diagnostics)
     hourly, hourly_diagnostics = build_hourly(landing)
     rows = write_required_marts(out_dir, hourly, daily)
 
-    inputs = sorted(eea_dir.glob("SPO-*.parquet"))
+    inputs = sorted(eea_dir.glob("SPO-*.parquet")) + sorted(utd_pm10_files(landing).values())
     inputs += snapshot_files(landing, "cams", "air_quality") + snapshot_files(landing, "openmeteo", "forecast")
     run_id, digests = compute_run_id(out_dir, inputs, landing)
     manifest = assemble_manifest(out_dir, generated_at, run_id)

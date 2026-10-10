@@ -63,6 +63,8 @@ SECOND_MODEL_FILE = "pm10_risk_logreg_no_next_day_weather.json"
 LIVE_MODEL_FILE = "pm10_risk_logreg_live.json"
 # Live predictions written by `python -m plovdiv.ml.live`: one row per station, target day and model.
 DEFAULT_LIVE_STORE = REPO_ROOT / "data" / "live" / "pm10_risk_live.parquet"
+# Out-of-sample replay of the days after the test period, written by `python -m plovdiv.ml.replay`.
+DEFAULT_REPLAY_STORE = REPO_ROOT / "data" / "live" / "pm10_risk_replay.parquet"
 METRICS_FILE = "pm10_risk_metrics.json"
 PREDICTIONS_FILE = "pm10_risk_daily_predictions.parquet"
 
@@ -77,7 +79,14 @@ PROBABILITY_COLUMN = {
 # sampling point codes landed in data/landing; the types are those stated by the project owner.
 STATIONS = {
     "BG0051A": {"label": "Kamenitsa", "station_type": "background", "area_type": "urban", "location_id": "plovdiv"},
-    "BG0078A": {"label": "Trakia", "station_type": "traffic", "area_type": "urban", "location_id": "plovdiv"},
+    "BG0078A": {
+        "label": "Trakia",
+        "station_type": "traffic",
+        "area_type": "urban",
+        "location_id": "plovdiv",
+        # mart_aq_daily keys its rows by location, so Trakia's daily means have a location of their own.
+        "daily_location_id": "plovdiv-trakia",
+    },
 }
 TREND_YEARS = {"BG0051A": (2013, 2025), "BG0078A": (2017, 2025)}
 
@@ -142,7 +151,24 @@ LIMITATIONS = {
         + COMMON_LIMITATIONS
     ),
 }
+STATION_LIMITATIONS = (
+    "This is the live variant trained on the station's own record: PM10 history, the calendar and the weather of the "
+    "day just ended, without PM2.5 and without solar radiation. The station's record starts in 2017, so it has fewer "
+    "training days than Kamenitsa. Live rows use unverified hourly station data (EEA up-to-date files, daily mean "
+    "from at least 18 valid hours) and weather aggregated from Open-Meteo hourly model values, while training used "
+    "verified daily means and ERA5 reanalysis. The label is relative: a bad day is a day above the 75th percentile of "
+    "the same calendar month in the station's three previous years, so the threshold is the station's own and moves as "
+    "concentrations fall. The test period is 2023 to 2025 and was not used to tune anything. Class weighting makes "
+    "the probabilities larger than the observed frequencies in the middle range."
+)
 ALGORITHM = "Logistic regression, L2 penalty, standardised inputs, balanced class weights"
+# Live models of the secondary stations, written by `python -m plovdiv.ml.stations`.
+STATION_MODEL_GLOB = "pm10_risk_logreg_live_*.json"
+
+
+def is_station_model(document: dict) -> bool:
+    """A model trained by plovdiv.ml.stations: it carries its own evaluation."""
+    return "evaluation" in document
 
 
 # ---------------------------------------------------------------------------------------
@@ -195,16 +221,22 @@ def _date(value) -> datetime.date:
 def build_model_card(metrics: dict, documents: list[dict]) -> pd.DataFrame:
     """One row per model from the metrics file and the readable model files."""
     rows = []
-    baselines = metrics["baselines"]
     for doc in documents:
         variant = doc["variant"]
-        block = metrics["ablation"][variant]
-        if block["features"] != doc["feature_names"]:
-            raise ValueError(f"{variant}: feature lists of the metrics and the model file differ")
-        if abs(block["threshold"] - doc["threshold"]["value"]) > 1e-12:
-            raise ValueError(f"{variant}: threshold of the metrics and the model file differ")
+        if is_station_model(doc):
+            test = doc["evaluation"]["test"]
+            baselines = doc["evaluation"]["baselines"]
+            limitations = STATION_LIMITATIONS
+        else:
+            block = metrics["ablation"][variant]
+            if block["features"] != doc["feature_names"]:
+                raise ValueError(f"{variant}: feature lists of the metrics and the model file differ")
+            if abs(block["threshold"] - doc["threshold"]["value"]) > 1e-12:
+                raise ValueError(f"{variant}: threshold of the metrics and the model file differ")
+            test = block["test"]
+            baselines = metrics["baselines"]
+            limitations = LIMITATIONS[variant]
         periods = doc["periods_by_target_date"]
-        test = block["test"]
         rows.append(
             {
                 "model_id": doc["model"],
@@ -228,7 +260,7 @@ def build_model_card(metrics: dict, documents: list[dict]) -> pd.DataFrame:
                 "precision_test": float(test["precision"]),
                 "recall_test": float(test["recall"]),
                 "uses_forecast_weather": bool(doc["uses_next_day_weather"]),
-                "limitations": LIMITATIONS[variant],
+                "limitations": limitations,
             }
         )
     return pd.DataFrame(rows).sort_values("model_id").reset_index(drop=True)
@@ -238,7 +270,10 @@ def build_calibration(metrics: dict, documents: list[dict]) -> pd.DataFrame:
     """Reliability bins on the test split for each model, from the metrics file."""
     rows = []
     for doc in documents:
-        bins = metrics["ablation"][doc["variant"]]["test"]["calibration_bins"]
+        if is_station_model(doc):
+            bins = doc["evaluation"]["test"]["calibration_bins"]
+        else:
+            bins = metrics["ablation"][doc["variant"]]["test"]["calibration_bins"]
         for b in bins:
             n = int(b["count"])
             rows.append(
@@ -292,17 +327,18 @@ def build_risk_daily(predictions: pd.DataFrame, documents: list[dict]) -> pd.Dat
 LIVE_SPLIT = "live"
 
 
-def live_risk_rows(store: pd.DataFrame) -> pd.DataFrame:
+def live_risk_rows(store: pd.DataFrame, split: str = LIVE_SPLIT) -> pd.DataFrame:
     """Rows of mart_aq_risk_daily from the live store written by `python -m plovdiv.ml.live`.
 
     `issued_at` is the time the live run scored the row, not the end-of-day convention of the
-    evaluation rows. The as-of day (target_date - 1) and the inputs stay in the store.
+    evaluation rows. The as-of day (target_date - 1) and the inputs stay in the store. The replay
+    store of `python -m plovdiv.ml.replay` has the same layout and is read with split `replay`.
     """
     columns = ["station_id", "target_date", "issued_at", "probability", "label_id", "split", "actual_label", "model_id"]
     if store is None or not len(store):
         return pd.DataFrame(columns=columns)
-    if set(store["split"]) != {LIVE_SPLIT}:
-        raise ValueError(f"live store: unexpected splits {sorted(set(store['split']))}")
+    if set(store["split"]) != {split}:
+        raise ValueError(f"{split} store: unexpected splits {sorted(set(store['split']))}")
     target = pd.to_datetime(store["target_date"])
     asof = pd.to_datetime(store["asof_date"])
     if not (asof + pd.Timedelta(days=1) == target).all():
@@ -314,7 +350,7 @@ def live_risk_rows(store: pd.DataFrame) -> pd.DataFrame:
             "issued_at": pd.to_datetime(store["issued_at"], utc=True).astype("datetime64[us, UTC]").to_numpy(),
             "probability": store["probability"].astype(float).to_numpy(),
             "label_id": store["label_id"].astype(str).to_numpy(),
-            "split": LIVE_SPLIT,
+            "split": split,
             "actual_label": pd.array(store["actual_label"], dtype="Int64"),
             "model_id": store["model_id"].astype(str).to_numpy(),
         }
@@ -542,7 +578,43 @@ def model_documents(models_dir: Path) -> list[dict]:
     documents = [read_json(models_dir / PRIMARY_MODEL_FILE), read_json(models_dir / SECOND_MODEL_FILE)]
     if (models_dir / LIVE_MODEL_FILE).exists():
         documents.append(read_json(models_dir / LIVE_MODEL_FILE))
+    for path in sorted(Path(models_dir).glob(STATION_MODEL_GLOB)):
+        document = read_json(path)
+        if not is_station_model(document):
+            raise ValueError(f"{path.name}: a station model file must carry its own evaluation")
+        if document["station_id"] not in STATIONS:
+            raise ValueError(f"{path.name}: station {document['station_id']} is not in STATIONS")
+        documents.append(document)
     return documents
+
+
+def station_risk_rows(document: dict, eea_dir: Path, weather_file: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Validation and test rows of a station model for mart_aq_risk_daily, and its test drivers.
+
+    The probabilities are rebuilt from the readable weights and the landed files, so the mart always
+    matches the model file. Issue time follows the evaluation convention (end of day t).
+    """
+    from plovdiv.ml import stations  # local import: stations imports train, which is heavier
+
+    station_id = document["station_id"]
+    table = stations.station_table(station_id, eea_dir, weather_file)
+    rows = stations.evaluation_rows(document, table)
+    target = pd.to_datetime(rows["date"])
+    risk = pd.DataFrame(
+        {
+            "station_id": station_id,
+            "target_date": [d.date() for d in target],
+            "issued_at": pd.DatetimeIndex(target).tz_localize("UTC").astype("datetime64[us, UTC]"),
+            "probability": rows["probability"].astype(float).to_numpy(),
+            "label_id": document["label"]["id"],
+            "split": rows["split"].to_numpy(),
+            "actual_label": rows["label"].astype("int64").to_numpy(),
+            "model_id": document["model"],
+        }
+    )
+    features_by_asof = table[list(document["feature_names"])]
+    drivers = build_risk_drivers(rows, features_by_asof, document)
+    return risk, drivers
 
 
 def build_all(
@@ -551,6 +623,7 @@ def build_all(
     weather_file: Path,
     n_replicates: int = trend.N_REPLICATES,
     live_store: Path | None = None,
+    replay_store: Path | None = None,
 ) -> tuple[dict[str, pd.DataFrame], dict]:
     """Build every mart in memory. Returns the frames and the diagnostics.
 
@@ -559,21 +632,39 @@ def build_all(
     """
     metrics = read_json(models_dir / METRICS_FILE)
     documents = model_documents(models_dir)
+    reference_documents = [d for d in documents if not is_station_model(d)]
+    station_documents = [d for d in documents if is_station_model(d)]
     predictions = pd.read_parquet(models_dir / PREDICTIONS_FILE)
 
     table = model_feature_table(eea_dir, weather_file)
-    input_check = check_model_inputs(predictions, table, documents)
+    input_check = check_model_inputs(predictions, table, reference_documents)
     primary = next(d for d in documents if d["variant"] == DRIVER_VARIANT)
+    station_parts = [station_risk_rows(d, eea_dir, weather_file) for d in station_documents]
 
     store = pd.read_parquet(live_store) if live_store is not None and Path(live_store).exists() else None
+    replay = pd.read_parquet(replay_store) if replay_store is not None and Path(replay_store).exists() else None
     by_id = {d["model"]: d for d in documents}
-    if store is not None and len(store):
-        unknown = sorted(set(store["model_id"]) - set(by_id))
-        if unknown:
-            raise ValueError(f"live store: models {unknown} have no model file in {models_dir}")
-    risk = pd.concat([build_risk_daily(predictions, documents), live_risk_rows(store)], ignore_index=True)
+    for name, frame in (("live", store), ("replay", replay)):
+        if frame is not None and len(frame):
+            unknown = sorted(set(frame["model_id"]) - set(by_id))
+            if unknown:
+                raise ValueError(f"{name} store: models {unknown} have no model file in {models_dir}")
+    risk = pd.concat(
+        [
+            build_risk_daily(predictions, reference_documents),
+            *[p[0] for p in station_parts],
+            live_risk_rows(replay, split="replay"),
+            live_risk_rows(store),
+        ],
+        ignore_index=True,
+    )
     drivers = pd.concat(
-        [build_risk_drivers(predictions, table, primary), live_driver_rows(store, by_id)], ignore_index=True
+        [
+            build_risk_drivers(predictions, table, primary),
+            *[p[1] for p in station_parts],
+            live_driver_rows(store, by_id),
+        ],
+        ignore_index=True,
     )
 
     frames = {
@@ -614,6 +705,7 @@ def build_all(
                 p.name: sha256_of(p)
                 for p in sorted(
                     [models_dir / f for f in (PRIMARY_MODEL_FILE, SECOND_MODEL_FILE, METRICS_FILE, PREDICTIONS_FILE)]
+                    + [models_dir / f"{d['model']}.json" for d in station_documents]
                     + [eea_dir / f"SPO-{s}_{dataset.PM10_CODE}_100.parquet" for s in TREND_YEARS]
                     + [eea_dir / f"SPO-{dataset.STATION_ID}_{dataset.PM25_CODE}_100.parquet", weather_file]
                 )
@@ -686,11 +778,19 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_LIVE_STORE,
         help="live predictions of python -m plovdiv.ml.live, added as split live when the file exists",
     )
+    parser.add_argument(
+        "--replay-store",
+        type=Path,
+        default=DEFAULT_REPLAY_STORE,
+        help="replayed predictions of python -m plovdiv.ml.replay, added as split replay when the file exists",
+    )
     args = parser.parse_args(argv)
 
     eea_dir = args.eea_dir or default_eea_dir()
     weather_file = args.weather_file or default_weather_file()
-    frames, diagnostics = build_all(args.models_dir, eea_dir, weather_file, args.replicates, live_store=args.live_store)
+    frames, diagnostics = build_all(
+        args.models_dir, eea_dir, weather_file, args.replicates, live_store=args.live_store, replay_store=args.replay_store
+    )
 
     generated_at = args.generated_at or f"{partition_date(weather_file.parent)}T00:00:00Z"
     digest = hashlib.sha256(json.dumps(diagnostics["inputs"]["sha256"], sort_keys=True).encode()).hexdigest()

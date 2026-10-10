@@ -122,7 +122,12 @@
           "label": { "type": "string", "minLength": 1 },
           "station_type": { "type": "string", "minLength": 1 },
           "area_type": { "type": "string", "minLength": 1 },
-          "location_id": { "type": "string", "minLength": 1 }
+          "location_id": { "type": "string", "minLength": 1 },
+          "daily_location_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Location under which the station's daily means are published in mart_aq_daily, when it differs from location_id."
+          }
         },
         "additionalProperties": false
       }

@@ -44,12 +44,62 @@ average (95th percentile 0.067), ROC-AUC 0.849 to 0.848, Brier 0.126 to 0.128, a
 threshold. The difference is not material, so no correction is applied. The four landed capture days
 (2026-10-05 to 2026-10-08) show the same signs (humidity +9 %, minimum temperature -1.4 degC), with only four days.
 
+### Second station (Trakia, BG0078A)
+
+`python -m plovdiv.ml.live` scores every station that has a live model file. Trakia has its own,
+`models/pm10_risk_logreg_live_trakia.json`, trained by `python -m plovdiv.ml.stations` on Trakia's E1a record with
+the same features, splits, regularisation grid and threshold rule, and with Trakia's own label thresholds.
+
+On Trakia's test years (2023-2025, 988 days) the Kamenitsa live model ranks days almost as well but is worse
+calibrated, which is why Trakia has a model of its own:
+
+| Model on Trakia test rows | ROC-AUC | Brier | Precision | Recall |
+|---|---|---|---|---|
+| Trakia live model (threshold 0.58) | 0.864 | 0.128 | 0.595 | 0.545 |
+| Kamenitsa live model (threshold 0.54) | 0.834 | 0.152 | 0.431 | 0.689 |
+
+With two stations, `data/live/last_run.json` holds one report per station under `stations`, and the status is
+`scored`, `partial` or `refused`. The command exits with 2 when any station is refused.
+
+### Checking live rows (`python -m plovdiv.ml.verify`)
+
+Runs on every pipeline run, after the EEA download. For each live row whose target day is complete in the newest UTD
+file of its station it stores the PM10 daily mean (18 of 24 valid hours), the label threshold of the target month,
+the outcome, the number of valid hours, the verification status of those hours and the time of the check. Rows are
+checked again on every run, so a value the reporting country corrects later replaces the earlier one. The model marts
+then publish the outcome in `mart_aq_risk_daily.actual_label`, and `mart_aq_daily` continues past the E1a record with
+the UTD daily means, so every decided live day has its station value in the daily mart.
+
+First result: the row for 2026-10-09 (probability 0.395, no bad day called) was right; Kamenitsa measured 35.7 ug/m3
+against a threshold of 40.74.
+
+### Replay of 2026 (`python -m plovdiv.ml.replay`)
+
+Waiting for live rows to accumulate would take months, so the live models were also scored on every day of 2026 up to
+the first live row, with the inputs a live run would have had: station data cut at the as-of day and ECMWF IFS hourly
+weather from the Open-Meteo historical forecast API (landed under `source=openmeteo/endpoint=historical_forecast/`),
+aggregated with the live rule. The rows are stored in `data/live/pm10_risk_replay.parquet` with split `replay` and the
+end-of-day issue convention. They are out of sample (the models never saw 2026) but not issued in real time, and the
+station values have mostly been verified since, so they are slightly kinder than live forecasting.
+
+Results for 2026-01-01 to 2026-10-09 (outcomes decided by `verify`):
+
+| Station | Days | Bad days | ROC-AUC | Persistence ROC-AUC | Right calls | Bad days flagged | False alarms | Brier |
+|---|---|---|---|---|---|---|---|---|
+| Kamenitsa | 265 | 17 (6.4 %) | 0.894 | 0.665 | 242 | 7 of 17 | 13 | 0.079 |
+| Trakia | 271 | 34 (12.5 %) | 0.767 | 0.697 | 246 | 16 of 34 | 7 | 0.126 |
+
+Bad days were far rarer in 2026 than the quarter the label is built around, because concentrations kept falling below
+the three-year thresholds. Kamenitsa ranks days better than on the test years; Trakia ranks them worse than on its
+test years (0.864), and both beat persistence. Most bad days fell in March to May.
+
 ### Still open for the live row
 
-- The UTD hourly file is landed once (fetch_date=2026-10-08); no scheduled job refreshes it, so the command refuses
-  as stale until a newer file is landed. The live row of 2026-10-09 was produced from a file downloaded to a scratch
-  folder with `--utd-file`.
-- `actual_label` of live rows is never filled, and `mart_aq_daily` has no 2026 days to check it against.
+- The row for day t+1 is scored once day t is complete in the station file, which arrives during day t+1. The
+  dashboard therefore labels it as the risk for today. A model with a two-day horizon would give a real forecast for
+  tomorrow.
+- Station hours used for live rows are mostly verified already, but the hourly file can still change; `verify`
+  records the verification status with each outcome.
 
 ## Original gap analysis
 

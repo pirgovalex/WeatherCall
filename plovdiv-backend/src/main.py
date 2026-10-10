@@ -240,7 +240,7 @@ def create_app(allowed_origins: Optional[List[str]] = None, marts_dir: Optional[
         snapshot = warehouse.current()
         if pollutant not in AQ_POLLUTANTS or pollutant not in snapshot.variables:
             raise not_found(f"Pollutant '{pollutant}' is not available.")
-        if location not in snapshot.locations:
+        if location not in snapshot.locations | snapshot.daily_locations:
             raise not_found(f"Location '{location}' was not found.")
 
         rows = warehouse.fetch_daily_air_quality(snapshot, pollutant, location, first, last)

@@ -609,7 +609,8 @@ class TestFixtureProperties:
             counts = df["station_id"].value_counts()
             assert counts[STATION_WITH_FEWER_ROWS] < counts[STATION_WITH_MORE_ROWS]
         assert set(risk[risk["station_id"] == STATION_WITH_FEWER_ROWS]["split"]) == {"test", "live"}
-        assert set(risk[risk["station_id"] == STATION_WITH_MORE_ROWS]["split"]) == set(S.VALID_SPLITS)
+        # The fixtures predate the replay split; it has the same columns and rules as live.
+        assert set(risk[risk["station_id"] == STATION_WITH_MORE_ROWS]["split"]) == set(S.VALID_SPLITS) - {"replay"}
 
     def test_null_cases_are_present(self):
         trend = read_mart("mart_aq_trend_monthly")
@@ -933,7 +934,7 @@ class TestOpenApiNewEndpoints:
 
         everything = risk_payload("BG0051A", first="2025-06-24", last="2026-10-28")
         assert_conforms(everything, "AqRiskResponse")
-        assert set(everything["split"]) == set(S.VALID_SPLITS)
+        assert set(everything["split"]) == set(S.VALID_SPLITS) - {"replay"}  # no replay rows in the fixtures
 
         empty = risk_payload("BG0051A", first="2024-01-01", last="2024-01-31")
         assert_conforms(empty, "AqRiskResponse")

@@ -395,6 +395,11 @@ export interface components {
              * @example plovdiv
              */
             location_id: string;
+            /**
+             * @description Location under which the station's daily means are published by /api/v1/aq/daily, when it differs from location_id. Absent when the station's daily means use location_id.
+             * @example plovdiv-trakia
+             */
+            daily_location_id?: string;
         };
         MartRowCount: {
             /** @example mart_model_card/latest/*.parquet */
@@ -572,7 +577,7 @@ export interface components {
              *       "live"
              *     ]
              */
-            split: ("train" | "validation" | "test" | "live")[];
+            split: ("train" | "validation" | "test" | "live" | "replay")[];
             /**
              * @description Observed outcome (1 when the label occurred, 0 when not); null until it is known or when the day has too little data to decide.
              * @example [
@@ -985,7 +990,7 @@ export interface operations {
                 /** @description End target date (YYYY-MM-DD), inclusive. Required unless latest=true, and not allowed with latest=true. Maximum span is 366 days. */
                 to?: string;
                 /** @description Restrict rows to one data split. */
-                split?: "train" | "validation" | "test" | "live";
+                split?: "train" | "validation" | "test" | "live" | "replay";
                 /** @description Restrict rows to one model. When omitted, rows of every model in the mart are returned. */
                 model_id?: string;
                 /** @description When true, return only the most recently issued row with its drivers instead of a range. */

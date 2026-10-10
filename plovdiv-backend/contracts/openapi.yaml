@@ -300,6 +300,7 @@ paths:
               - validation
               - test
               - live
+              - replay
             example: "live"
         - name: model_id
           in: query
@@ -754,6 +755,12 @@ components:
           type: string
           description: Location the station belongs to.
           example: "plovdiv"
+        daily_location_id:
+          type: string
+          description: >-
+            Location under which the station's daily means are published by /api/v1/aq/daily, when it
+            differs from location_id. Absent when the station's daily means use location_id.
+          example: "plovdiv-trakia"
 
     MartRowCount:
       type: object
@@ -1007,6 +1014,7 @@ components:
               - validation
               - test
               - live
+              - replay
           example:
             - "live"
             - "live"

@@ -395,9 +395,19 @@ def test_real_inputs_reproduce_the_stored_predictions_and_build_valid_marts():
     for name in marts.MART_ORDER:
         problems = marts.validate(name, marts.to_table(name, frames[name]))
         assert problems == [], name
-    assert len(frames["mart_aq_risk_daily"]) == 3 * 1770  # three models, 1770 validation and test days
-    assert len(frames["mart_aq_risk_drivers"]) == 5320
+    risk = frames["mart_aq_risk_daily"]
+    reference = risk[risk["station_id"] == "BG0051A"]
+    assert len(reference) == 3 * 1770  # three Kamenitsa models, 1770 validation and test days
+    trakia = risk[risk["station_id"] == "BG0078A"]
+    trakia_doc = marts.read_json(marts.DEFAULT_MODELS_DIR / "pm10_risk_logreg_live_trakia.json")
+    assert set(trakia["model_id"]) == {"pm10_risk_logreg_live_trakia"}
+    assert len(trakia) == sum(trakia_doc["rows"][s]["n_rows"] for s in ("validation", "test"))
+    drivers = frames["mart_aq_risk_drivers"]
+    assert len(drivers[drivers["station_id"] == "BG0051A"]) == 5320
+    assert len(drivers[drivers["station_id"] == "BG0078A"]) == 5 * trakia_doc["rows"]["test"]["n_rows"]
     assert len(frames["mart_aq_trend_monthly"]) == 264
+    card = frames["mart_model_card"].set_index("model_id")
+    assert card.loc["pm10_risk_logreg_live_trakia", "roc_auc_test"] == trakia_doc["evaluation"]["test"]["roc_auc"]
 
 
 @real_data

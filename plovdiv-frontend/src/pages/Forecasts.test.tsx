@@ -34,7 +34,23 @@ describe('Forecasts page', () => {
     expect(rows[3]).toHaveTextContent('0.071 lower than the model')
   })
 
+  it('compares the live calls with what happened and lists the most recent ones', async () => {
+    renderApp('/forecasts')
+    const live = await screen.findByTestId('track-live')
+    expect(live).toHaveTextContent('Right calls')
+    expect(live).toHaveTextContent('Bad days flagged')
+    expect(live).toHaveTextContent('not counted yet')
+    const table = screen.getByTestId('recent-calls')
+    const rows = within(table).getAllByRole('row')
+    expect(rows.length).toBeGreaterThan(1)
+    expect(rows.length).toBeLessThanOrEqual(11)
+    expect(table).toHaveTextContent('Waiting for the station data')
+    // The contract fixtures carry no replay rows.
+    expect(screen.queryByTestId('track-replay')).toBeNull()
+  })
+
   it('explains that verification will fill in as captures accumulate, with no data', async () => {
+    setScenario('empty')
     renderApp('/forecasts')
     const empty = await screen.findByTestId('verification-empty')
     expect(empty).toHaveTextContent('fills in as forecast captures accumulate')
