@@ -56,6 +56,28 @@ def hash_directory_files(directory: Path) -> dict[str, str]:
     return result
 
 
+def content_hash(path: Path) -> str:
+    """SHA-256 of what a reader sees: Parquet files by schema and rows, other files by bytes.
+
+    Parquet files record the version of the library that wrote them, so the bytes of an identical
+    table change with the pyarrow version. Column types, names, nullability and values do not.
+    """
+    if path.suffix != ".parquet":
+        return sha256_of_file(path)
+    table = pq.read_table(path).replace_schema_metadata(None)
+    hasher = hashlib.sha256(str(table.schema).encode("utf-8"))
+    hasher.update(table.to_pandas().to_json(orient="split", date_format="iso", double_precision=15).encode("utf-8"))
+    return hasher.hexdigest()
+
+
+def content_hashes(directory: Path) -> dict[str, str]:
+    return {
+        p.relative_to(directory).as_posix(): content_hash(p)
+        for p in sorted(directory.rglob("*"))
+        if p.is_file()
+    }
+
+
 class TestFixtureDeterminism:
     """Challenge 1: Determinism across multiple clean directories and CLI invocations."""
 
@@ -95,18 +117,22 @@ class TestFixtureDeterminism:
                 )
 
     def test_checked_in_fixtures_match_fresh_generator(self):
-        """Verify repository checked-in fixtures match fresh generation with seed=42."""
+        """Verify repository checked-in fixtures match fresh generation with seed=42.
+
+        Parquet files are compared by content, not bytes: the checked-in files may have been written
+        by another pyarrow version. Byte identity within one environment is covered above.
+        """
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
             out_valid = tmp_path / "fixtures"
             out_invalid = tmp_path / "fixtures_invalid"
             write_fixtures(out_dir=out_valid, invalid_dir=out_invalid, seed=42)
 
-            fresh_valid_hashes = hash_directory_files(out_valid)
-            repo_valid_hashes = hash_directory_files(REPO_ROOT / "contracts" / "fixtures")
+            fresh_valid_hashes = content_hashes(out_valid)
+            repo_valid_hashes = content_hashes(REPO_ROOT / "contracts" / "fixtures")
 
-            fresh_invalid_hashes = hash_directory_files(out_invalid)
-            repo_invalid_hashes = hash_directory_files(REPO_ROOT / "contracts" / "fixtures_invalid")
+            fresh_invalid_hashes = content_hashes(out_invalid)
+            repo_invalid_hashes = content_hashes(REPO_ROOT / "contracts" / "fixtures_invalid")
 
             assert fresh_valid_hashes == repo_valid_hashes, (
                 f"Repository fixtures differ from fresh seed=42 generation: "
